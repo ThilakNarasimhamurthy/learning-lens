@@ -8,7 +8,7 @@ const _inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const _spaceMono = Space_Mono({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-space-mono' })
 
 export const metadata: Metadata = {
-  title: 'EduFlow AI - Interactive Demo',
+  title: 'Learning Lens',
   description: 'End-to-end AI-powered student assessment platform demo. Student uploads essay, AI analyzes against rubric, generates prompts, student revises, teacher reviews.',
 }
 

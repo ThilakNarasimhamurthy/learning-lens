@@ -31,7 +31,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-          <CardDescription>Join EduFlow AI</CardDescription>
+          <CardDescription>Join Learning Lens</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">

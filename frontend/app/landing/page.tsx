@@ -18,7 +18,7 @@ export default function LandingPage() {
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              EduFlow AI
+              Learning Lens
             </span>
           </div>
           <div className="flex gap-3">
@@ -233,10 +233,10 @@ export default function LandingPage() {
               <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">EduFlow AI</span>
+              <span className="text-xl font-bold text-white">Learning Lens</span>
             </div>
             <div className="text-sm">
-              © 2026 EduFlow AI. All rights reserved.
+              © 2026 Learning Lens. All rights reserved.
             </div>
           </div>
         </div>

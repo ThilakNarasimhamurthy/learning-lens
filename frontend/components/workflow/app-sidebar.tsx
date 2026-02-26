@@ -45,7 +45,7 @@ export function AppSidebar({
         </div>
         {!collapsed && (
           <span className="text-sm font-bold text-sidebar-foreground tracking-tight">
-            EduFlow AI
+            Learning Lens
           </span>
         )}
       </div>
