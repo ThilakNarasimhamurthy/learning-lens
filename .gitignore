@@ -1,0 +1,5 @@
+# OS / local
+.DS_Store
+
+# Build artifacts
+*.tsbuildinfo
