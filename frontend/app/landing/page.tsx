@@ -109,7 +109,7 @@ export default function LandingPage() {
               </div>
               <CardTitle>Milestone System</CardTitle>
               <CardDescription>
-                Checkpoint-based submissions with deadlines and automated reminders
+                Task-based submissions with deadlines and automated reminders
               </CardDescription>
             </CardHeader>
           </Card>
@@ -165,7 +165,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-bold mb-2">Students Submit</h3>
               <p className="text-gray-600">
-                Upload work at checkpoints. Get instant AI feedback with specific guidance for improvement.
+                Upload work at tasks. Get instant AI feedback with specific guidance for improvement.
               </p>
             </div>
 

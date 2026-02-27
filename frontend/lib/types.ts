@@ -25,7 +25,7 @@ export interface Milestone {
   dueDate: string
   order: number
   reminderSent?: boolean
-  /** When set and in the future, checkpoint is not yet open for participation */
+  /** When set and in the future, task is not yet open for participation */
   opensOn?: string
 }
 

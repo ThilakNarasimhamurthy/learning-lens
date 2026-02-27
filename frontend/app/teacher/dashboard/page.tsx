@@ -31,11 +31,27 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { dedupeById } from '@/lib/utils'
 
+const REALTIME_KEYS = ['eduflow_evidence', 'eduflow_feedback', 'eduflow_progress', 'eduflow_flags']
+
 function DashboardContent() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [projects, setProjects] = useState<any[]>([])
   const [lastSynced, setLastSynced] = useState<Date>(new Date())
+
+  // Real-time updates when a student submits in another tab (storage event)
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key && REALTIME_KEYS.includes(e.key)) {
+        if (user) {
+          setProjects(dedupeById(getProjectsByTeacher(user.id)))
+          setLastSynced(new Date())
+        }
+      }
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [user])
 
   useEffect(() => {
     // Ensure demo teacher user and demo data for full flow

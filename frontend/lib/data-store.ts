@@ -114,7 +114,7 @@ export function generateRubricFromStandards(standards: Standard[]): RubricCriter
   return baseCriteria.slice(0, categories.length > 1 ? 5 : 4).map((c, i) => ({ ...c, id: `c${i + 1}` }))
 }
 
-/** AI-suggested checkpoints (milestones) from project title & description */
+/** AI-suggested tasks (milestones) from project title & description */
 export function suggestCheckpointsFromProject(title: string, description: string): Milestone[] {
   const text = `${title} ${description}`.toLowerCase()
   const now = Date.now()
@@ -142,9 +142,9 @@ export function suggestCheckpointsFromProject(title: string, description: string
     ]
   }
   return [
-    { id: 'm1', name: 'Checkpoint 1', description: 'First submission checkpoint', dueDate: new Date(now + 7 * day).toISOString().split('T')[0], order: 1 },
-    { id: 'm2', name: 'Checkpoint 2', description: 'Mid-project review', dueDate: new Date(now + 14 * day).toISOString().split('T')[0], order: 2 },
-    { id: 'm3', name: 'Final Checkpoint', description: 'Final submission', dueDate: new Date(now + 21 * day).toISOString().split('T')[0], order: 3 },
+    { id: 'm1', name: 'Task 1', description: 'First submission task', dueDate: new Date(now + 7 * day).toISOString().split('T')[0], order: 1 },
+    { id: 'm2', name: 'Task 2', description: 'Mid-project review', dueDate: new Date(now + 14 * day).toISOString().split('T')[0], order: 2 },
+    { id: 'm3', name: 'Final Task', description: 'Final submission', dueDate: new Date(now + 21 * day).toISOString().split('T')[0], order: 3 },
   ]
 }
 
@@ -575,7 +575,7 @@ const DEMO_RUBRIC = [
 function demoMilestones(daysFromNow: number[]) {
   return daysFromNow.map((days, i) => ({
     id: `m${i + 1}`,
-    name: ['Initial Draft', 'Revision', 'Final Submission'][i] || `Checkpoint ${i + 1}`,
+    name: ['Initial Draft', 'Revision', 'Final Submission'][i] || `Task ${i + 1}`,
     description: `Milestone ${i + 1}`,
     dueDate: new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     order: i + 1
@@ -638,7 +638,43 @@ export function seedDemoData(opts?: { force?: boolean }): void {
     rubric: DEMO_RUBRIC,
     milestones: demoMilestones([7, 14]),
     taskType: 'individual',
-    status: 'draft'
+    status: 'published'
+  })
+
+  // p5: Community Impact Documentary — PBL with all task states (Completed, Past-due, Active, Inactive)
+  const p5Milestones: Milestone[] = [
+    { id: 'm1', name: 'Research & Proposal', description: 'Submit research on local issue and documentary proposal', dueDate: new Date(now.getTime() - 7 * day).toISOString().split('T')[0], order: 1 },
+    { id: 'm2', name: 'Script & Storyboard', description: 'Submit script and storyboard for documentary', dueDate: new Date(now.getTime() - 3 * day).toISOString().split('T')[0], order: 2 },
+    { id: 'm3', name: 'Rough Cut', description: 'Submit rough cut of documentary (5–8 min)', dueDate: new Date(now.getTime() + 7 * day).toISOString().split('T')[0], order: 3 },
+    { id: 'm4', name: 'Final Cut & Reflection', description: 'Submit final documentary and written reflection', dueDate: new Date(now.getTime() + 21 * day).toISOString().split('T')[0], order: 4, opensOn: '2026-05-01' },
+  ]
+  const p5 = createProject({
+    title: 'Community Impact Documentary',
+    description: 'Create a 5–8 minute documentary exploring a local community issue. Include research, script, rough cut, and final cut with reflection on impact.',
+    teacherId,
+    standards: [STANDARDS_LIBRARY[1], STANDARDS_LIBRARY[2]],
+    rubric: DEMO_RUBRIC,
+    milestones: p5Milestones,
+    taskType: 'individual',
+    status: 'published'
+  })
+
+  // p6: Sustainable Design Challenge — PBL with all task states
+  const p6Milestones: Milestone[] = [
+    { id: 'm1', name: 'Problem Definition & Research', description: 'Submit problem statement and background research', dueDate: new Date(now.getTime() - 5 * day).toISOString().split('T')[0], order: 1 },
+    { id: 'm2', name: 'Prototype Design', description: 'Submit design sketches and material list', dueDate: new Date(now.getTime() - 2 * day).toISOString().split('T')[0], order: 2 },
+    { id: 'm3', name: 'Build & Test', description: 'Submit prototype build log and testing results', dueDate: new Date(now.getTime() + 10 * day).toISOString().split('T')[0], order: 3 },
+    { id: 'm4', name: 'Final Presentation', description: 'Submit presentation and improvement plan', dueDate: new Date(now.getTime() + 24 * day).toISOString().split('T')[0], order: 4, opensOn: '2026-05-15' },
+  ]
+  const p6 = createProject({
+    title: 'Sustainable Design Challenge',
+    description: 'Design a sustainable solution for a school or community problem. Complete problem research, prototype design, build and test, then present your solution.',
+    teacherId,
+    standards: [STANDARDS_LIBRARY[4], STANDARDS_LIBRARY[5]],
+    rubric: DEMO_RUBRIC,
+    milestones: p6Milestones,
+    taskType: 'individual',
+    status: 'published'
   })
 
   // —— Classes ——
@@ -648,8 +684,10 @@ export function seedDemoData(opts?: { force?: boolean }): void {
 
   assignProjectToClass(c1.id, p1.id)
   assignProjectToClass(c1.id, p2.id)
+  assignProjectToClass(c1.id, p5.id)
   assignProjectToClass(c2.id, p1.id)
   assignProjectToClass(c2.id, p4.id)
+  assignProjectToClass(c2.id, p6.id)
   assignProjectToClass(c3.id, p3.id)
 
   // —— Evidence, Feedback, Progress, Flags (dummy entries for full dashboard) ——
@@ -710,7 +748,7 @@ export function seedDemoData(opts?: { force?: boolean }): void {
     })
   }
 
-  // p1: s1 has m1 only (completed); m2 past-due, m3 active, m4 inactive — showcases all checkpoint states
+  // p1: s1 has m1 only (completed); m2 past-due, m3 active, m4 inactive — showcases all task states
   addEvidenceAndFeedback('s1', p1.id, 'm1', 'Climate change requires policy action. Evidence from IPCC...', [3, 3, 3, 3])
   addEvidenceAndFeedback('s2', p1.id, 'm1', 'My argument is that renewable energy can replace fossil fuels...', [2, 2, 3, 2])
   addEvidenceAndFeedback('s3', p1.id, 'm1', 'First draft on climate policy.', [3, 3, 2, 3])
@@ -722,6 +760,12 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   addEvidenceAndFeedback('s2', p3.id, 'm1', 'Hypothesis: vinegar and baking soda will produce CO2.', [3, 3, 3, 3])
   addEvidenceAndFeedback('s3', p3.id, 'm1', 'Lab report draft.', [4, 3, 4, 4])
   addEvidenceAndFeedback('s4', p3.id, 'm1', 'Experiment documentation.', [3, 3, 3, 3])
+  // p5: Community Impact Documentary — s1 has m1 (Task 1) completed; m2 past-due, m3 active, m4 inactive
+  addEvidenceAndFeedback('s1', p5.id, 'm1', 'Research on food insecurity in our community. Documentary will focus on local food bank.', [3, 3, 3, 3])
+  addEvidenceAndFeedback('s2', p5.id, 'm1', 'Proposal: Documentary on youth mental health and school support.', [4, 3, 4, 3])
+  // p6: Sustainable Design Challenge — s2 has m1 (Task 1) completed; m2 past-due, m3 active, m4 inactive
+  addEvidenceAndFeedback('s2', p6.id, 'm1', 'Problem: Cafeteria food waste. Research on composting and student behavior.', [3, 4, 3, 3])
+  addEvidenceAndFeedback('s4', p6.id, 'm1', 'Design challenge: Solar-powered phone charging station for common areas.', [3, 3, 2, 3])
 
   const key = (s: string, p: string) => `${s}-${p}`
   const progressByKey = new Map<string, StudentProgress>()
@@ -796,7 +840,7 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   store.progress = progressList
   store.flags = flagsList
 
-  console.log('Demo data seeded: 4 projects, 3 classes, evidence & progress & flags')
+  console.log('Demo data seeded: 6 projects, 3 classes, evidence & progress & flags')
 }
 
 // Helper to find class by join code

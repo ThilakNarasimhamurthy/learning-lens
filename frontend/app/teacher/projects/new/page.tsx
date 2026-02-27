@@ -102,7 +102,7 @@ function NewProjectContent() {
     setStep(3)
   }
 
-  const aiCheckpointSteps = ['Analyzing project goals', 'Identifying natural checkpoints', 'Suggesting submission stages', 'Setting suggested due dates', 'Checkpoints ready']
+  const aiCheckpointSteps = ['Analyzing project goals', 'Identifying natural tasks', 'Suggesting submission stages', 'Setting suggested due dates', 'Tasks ready']
 
   const runSuggestCheckpoints = async () => {
     setAiSuggestingCheckpoints(true)
@@ -174,7 +174,7 @@ function NewProjectContent() {
       rubric,
       milestones,
       taskType,
-      status: 'draft',
+      status: 'published',
       attachments: attachments.length > 0 ? attachments : undefined
     })
     
@@ -391,15 +391,15 @@ function NewProjectContent() {
         {step === 4 && (
           <Card>
             <CardHeader>
-              <CardTitle>Step 4: Set Checkpoints (Milestones)</CardTitle>
-              <CardDescription>Create checkpoints for student submissions. Use AI to suggest checkpoints from your project details, or add your own.</CardDescription>
+              <CardTitle>Step 4: Set Tasks (Milestones)</CardTitle>
+              <CardDescription>Create tasks for student submissions. Use AI to suggest tasks from your project details, or add your own.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {aiSuggestingCheckpoints ? (
                 <div className="space-y-4 py-6">
                   <div className="flex items-center gap-2 text-blue-600 mb-4">
                     <Sparkles className="h-5 w-5" />
-                    <span className="font-medium">AI is suggesting checkpoints from your project</span>
+                    <span className="font-medium">AI is suggesting tasks from your project</span>
                   </div>
                   <AIProcessSteps currentStep={aiCheckpointStep} steps={aiCheckpointSteps} />
                 </div>
@@ -408,11 +408,11 @@ function NewProjectContent() {
                   <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <Sparkles className="h-5 w-5 text-blue-600" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-blue-900">AI-suggested checkpoints</p>
+                      <p className="text-sm font-medium text-blue-900">AI-suggested tasks</p>
                       <p className="text-xs text-blue-700">Based on your project title and description</p>
                     </div>
                     <Button variant="outline" size="sm" onClick={runSuggestCheckpoints}>
-                      Suggest checkpoints
+                      Suggest tasks
                     </Button>
                   </div>
                   {milestones.map((milestone, index) => (

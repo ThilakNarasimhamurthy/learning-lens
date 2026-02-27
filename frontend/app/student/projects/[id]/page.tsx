@@ -160,14 +160,14 @@ function StudentProjectContent() {
     const goToEvidenceGallery = opts?.goToEvidenceGallery ?? false
     setSubmitting(true)
     setAiProcessing(true)
-
+    
     try {
       // Simulate AI processing stages
       for (let i = 0; i < aiSteps.length; i++) {
         setAiStep(i)
         await new Promise(resolve => setTimeout(resolve, 800)) // Simulate processing time
       }
-
+      
       const newEvidence = submitEvidence({
         studentId: user.id,
         projectId: project.id,
@@ -178,7 +178,7 @@ function StudentProjectContent() {
         fileUrl: uploadedFile?.url,
         fileType: uploadedFile ? 'pdf' : undefined,
       })
-
+      
       // Refresh evidence from localStorage
       const updated = dedupeById(getEvidenceByStudent(user.id, project.id))
       setEvidence(updated)
@@ -191,9 +191,9 @@ function StudentProjectContent() {
         // Keep articleUrl, uploadedFile, articleMatches, selectedMilestone so Evidence Gallery can show them
       } else {
         setSubmitStep(1)
-        setContent('')
-        setReflection('')
-        setSelectedMilestone('')
+      setContent('')
+      setReflection('')
+      setSelectedMilestone('')
         setUploadedFile(null)
         setArticleMatches(null)
       }
@@ -292,18 +292,20 @@ function StudentProjectContent() {
                         <button
                           type="button"
                           onClick={() => setViewedMilestoneId(m.id)}
-                          className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 transition-colors font-semibold text-sm ${
+                          className={`flex items-center justify-center rounded-full border-2 shrink-0 transition-all duration-200 font-semibold ${
+                            isViewed ? 'w-12 h-12 text-base ring-2 ring-offset-2' : 'w-10 h-10 text-sm'
+                          } ${
                             state === 'completed'
-                              ? 'border-green-500 bg-green-50 text-green-700'
+                              ? 'border-green-600 bg-green-500 text-white' + (isViewed ? ' ring-green-300' : '')
                               : state === 'active' && isViewed
-                                ? 'border-primary ring-2 ring-primary/30 bg-primary/5 text-primary'
+                                ? 'border-primary ring-primary/30 bg-primary/5 text-primary'
                                 : state === 'active'
                                   ? 'border-primary bg-primary/5 text-primary'
                                   : state === 'past-due'
-                                    ? 'border-red-500 bg-red-50 text-red-600'
-                                    : 'border-gray-300 bg-gray-50 text-muted-foreground'
+                                    ? 'border-red-500 bg-red-50 text-red-600' + (isViewed ? ' ring-red-200' : '')
+                                    : 'border-gray-300 bg-gray-50 text-muted-foreground' + (isViewed ? ' ring-gray-200' : '')
                           }`}
-                          title={`Checkpoint ${index + 1}: ${m.name}${state === 'completed' ? ' (Completed)' : state === 'past-due' ? ' (Past-due)' : state === 'active' ? ' (Active)' : state === 'inactive' ? ' (Inactive)' : ''}`}
+                          title={`Task ${index + 1}: ${m.name}${state === 'completed' ? ' (Completed)' : state === 'past-due' ? ' (Past-due)' : state === 'active' ? ' (Active)' : state === 'inactive' ? ' (Inactive)' : ''}`}
                         >
                           {index + 1}
                         </button>
@@ -320,7 +322,7 @@ function StudentProjectContent() {
 
             {/* Legend */}
             <div className="flex flex-wrap gap-4 p-4 rounded-lg bg-yellow-50/80 border border-yellow-200/80 text-xs text-yellow-900">
-              <span className="flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-green-500 bg-green-50 text-green-700 font-semibold text-xs">1</span> Completed: green</span>
+              <span className="flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-green-600 bg-green-500 text-white font-semibold text-[10px]">1</span> Completed: green</span>
               <span className="flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-red-500 bg-red-50 text-red-600 font-semibold text-xs">2</span> Past-due: red</span>
               <span className="flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-primary bg-primary/5 text-primary font-semibold text-xs">3</span> Active: blue border</span>
               <span className="flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-gray-300 bg-gray-50 text-muted-foreground font-semibold text-xs">4</span> Inactive: click to view</span>
@@ -335,12 +337,37 @@ function StudentProjectContent() {
               const hasEvidenceForCheckpoint = evidence.some((ev) => ev.milestoneId === m.id)
               const assessment = assessmentResults[m.id]
               const isNotOpenYet = m.opensOn && new Date(m.opensOn) > new Date()
+              const checkpointState = getMilestoneState(m)
+              const statusLabel =
+                checkpointState === 'completed'
+                  ? 'Task completed'
+                  : checkpointState === 'inactive'
+                    ? 'Inactive Task'
+                    : checkpointState === 'past-due'
+                      ? 'Past due'
+                      : 'Active'
+              const statusBadgeClass =
+                checkpointState === 'completed'
+                  ? 'bg-green-100 text-green-800 border-green-200'
+                  : checkpointState === 'inactive'
+                    ? 'bg-gray-100 text-gray-600 border-gray-200'
+                    : checkpointState === 'past-due'
+                      ? 'bg-red-50 text-red-700 border-red-200'
+                      : 'bg-blue-50 text-blue-700 border-blue-200'
               return (
                 <Card className="rounded-xl border-gray-200 bg-stone-50/50">
                   <CardContent className="pt-6 space-y-5">
+                              {/* Status badge */}
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${statusBadgeClass}`}
+                                >
+                                  {statusLabel}
+                                </span>
+                              </div>
                               {/* Checkpoint details header */}
-                              <div className="mt-4 rounded-lg bg-gray-200/80 border border-gray-200/80 p-4 space-y-3">
-                                <h3 className="text-lg font-bold text-foreground">Checkpoint {index + 1}</h3>
+                              <div className="rounded-lg bg-gray-200/80 border border-gray-200/80 p-4 space-y-3">
+                                <h3 className="text-lg font-bold text-foreground">Task {index + 1}</h3>
                                 {(hasEvidenceForCheckpoint || isNotOpenYet) ? (
                                   <>
                                     <div>
@@ -384,13 +411,13 @@ function StudentProjectContent() {
                                 )}
                               </div>
 
-                              {/* State: Checkpoint not open yet */}
+                              {/* State: Task not open yet */}
                               {isNotOpenYet && (
                                 <div className="py-12 text-center space-y-3">
                                   <p className="text-sm text-muted-foreground">
                                     Check back on <span className="font-semibold text-foreground">
                                       {m.opensOn ? new Date(m.opensOn).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}
-                                    </span> to start the checkpoint!
+                                    </span> to start the task!
                                   </p>
                                   <span className="text-2xl" role="img" aria-label="Smiling">😊</span>
                                 </div>
@@ -430,7 +457,7 @@ function StudentProjectContent() {
                                       <div className="flex items-center gap-2">
                                         <CardTitle className="text-base">Assessment Analysis</CardTitle>
                                         <Badge variant="secondary" className="text-[10px]">AI Generated</Badge>
-                                      </div>
+                  </div>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                       <p className="text-sm text-muted-foreground">
@@ -452,8 +479,8 @@ function StudentProjectContent() {
                                         <ClipboardList className="h-4 w-4 mr-2" />
                                         Take Assessment
                                       </Button>
-                                    </CardContent>
-                                  </Card>
+                </CardContent>
+              </Card>
                                   <div>
                                     <p className="text-sm font-bold text-foreground mb-3">Evidence Gallery</p>
                                     <div className="flex items-center gap-2">
@@ -465,14 +492,18 @@ function StudentProjectContent() {
                                           const forCheckpoint = evidence.filter((ev) => ev.milestoneId === m.id)
                                           if (forCheckpoint.length === 0) {
                                             return [1, 2, 3, 4, 5].map((i) => (
-                                              <div key={i} className={`shrink-0 w-32 rounded-lg border p-3 flex flex-col gap-1 ${i <= 2 ? 'border-primary ring-2 ring-primary/20 bg-white' : 'border-gray-200 bg-gray-100'}`}>
+                                              <div key={i} className="shrink-0 w-32 rounded-lg border border-gray-200 p-3 flex flex-col gap-1 bg-gray-100">
                                                 <div className="aspect-[4/3] rounded bg-gray-100" />
                                                 <p className="text-[11px] text-muted-foreground">—</p>
                                               </div>
                                             ))
                                           }
-                                          return forCheckpoint.map((ev, i) => {
-                                            const selected = selectedEvidenceIdByCheckpoint[m.id] === ev.id || (!selectedEvidenceIdByCheckpoint[m.id] && i < 2)
+                                          const sortedByDate = [...forCheckpoint].sort(
+                                            (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+                                          )
+                                          const latestId = sortedByDate[0]?.id
+                                          return forCheckpoint.map((ev) => {
+                                            const selected = selectedEvidenceIdByCheckpoint[m.id] === ev.id || (!selectedEvidenceIdByCheckpoint[m.id] && ev.id === latestId)
                                             return (
                                               <div key={ev.id} onClick={(e) => { e.stopPropagation(); setSelectedEvidenceIdByCheckpoint(prev => ({ ...prev, [m.id]: ev.id })) } } className={`shrink-0 w-32 rounded-lg border p-3 flex flex-col gap-1 cursor-pointer ${selected ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200'}`}>
                                                 <div className="aspect-[4/3] rounded bg-muted flex items-center justify-center"><FileText className="h-8 w-8 text-muted-foreground" /></div>
@@ -530,7 +561,7 @@ function StudentProjectContent() {
                                         <CardTitle className="text-base">Assessment Analysis</CardTitle>
                                         <Badge variant="secondary" className="text-[10px]">AI Generated</Badge>
                                       </div>
-                                    </CardHeader>
+              </CardHeader>
                                     <CardContent className="space-y-4">
                                       <div>
                                         <p className="text-xs text-muted-foreground">Current Submission</p>
@@ -540,7 +571,7 @@ function StudentProjectContent() {
                                             {assessment?.levelLabel ?? 'Beginning'} ({assessment?.score ?? 1})
                                           </p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                                           {assessment?.note ?? 'Failed to demonstrate thinking and reasoning, only provided online resources'}
                                         </p>
                                       </div>
@@ -550,8 +581,8 @@ function StudentProjectContent() {
                                           <p className="text-base font-medium text-foreground">Want to try again?</p>
                                           <p className="text-sm text-muted-foreground">
                                             Retake the assessment to check your understanding again.
-                                          </p>
-                                        </div>
+                        </p>
+                      </div>
                                         <Button
                                           variant="outline"
                                           onClick={(e) => {
@@ -580,20 +611,24 @@ function StudentProjectContent() {
                                           const forCheckpoint = evidence.filter((ev) => ev.milestoneId === m.id)
                                           if (forCheckpoint.length === 0) {
                                             return [1, 2, 3, 4].map((i) => (
-                                              <div key={i} className={`shrink-0 w-32 rounded-lg border p-3 flex flex-col gap-1 ${i === 1 ? 'border-primary ring-2 ring-primary/20 bg-white' : 'border-gray-200 bg-gray-100'}`}>
+                                              <div key={i} className="shrink-0 w-32 rounded-lg border border-gray-200 p-3 flex flex-col gap-1 bg-gray-100">
                                                 <div className="aspect-[4/3] rounded bg-gray-100" />
                                                 <p className="text-[11px] text-muted-foreground">—</p>
                                               </div>
                                             ))
                                           }
+                                          const sortedByDate = [...forCheckpoint].sort(
+                                            (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+                                          )
+                                          const latestId = sortedByDate[0]?.id
                                           return forCheckpoint.map((ev) => {
-                                            const selected = selectedEvidenceIdByCheckpoint[m.id] === ev.id || (!selectedEvidenceIdByCheckpoint[m.id] && ev.id === forCheckpoint[0].id)
+                                            const selected = selectedEvidenceIdByCheckpoint[m.id] === ev.id || (!selectedEvidenceIdByCheckpoint[m.id] && ev.id === latestId)
                                             return (
                                               <div key={ev.id} onClick={(e) => { e.stopPropagation(); setSelectedEvidenceIdByCheckpoint(prev => ({ ...prev, [m.id]: ev.id })) } } className={`shrink-0 w-32 rounded-lg border p-3 flex flex-col gap-1 cursor-pointer ${selected ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200'}`}>
                                                 <div className="aspect-[4/3] rounded bg-muted flex items-center justify-center"><FileText className="h-8 w-8 text-muted-foreground" /></div>
                                                 <p className="text-[11px] text-muted-foreground">{new Date(ev.submittedAt).toLocaleDateString()}</p>
-                                              </div>
-                                            )
+                    </div>
+                  )
                                           })
                                         })()}
                                       </div>
@@ -639,8 +674,8 @@ function StudentProjectContent() {
                                   </div>
                                 </>
                               )}
-                  </CardContent>
-                </Card>
+              </CardContent>
+            </Card>
               )
             })()}
           </>
@@ -650,7 +685,7 @@ function StudentProjectContent() {
         {submitStep > 1 && (
           <div className="flex flex-wrap gap-4">
             {[
-              { id: 1, label: 'Choose checkpoint' },
+              { id: 1, label: 'Choose task' },
               { id: 2, label: 'Evidence & rubric' },
               { id: 3, label: 'Evidence Gallery' },
               { id: 4, label: 'Assessment' },
@@ -676,25 +711,25 @@ function StudentProjectContent() {
               <div className="space-y-6">
                 {selectedMilestone && (
                   <p className="text-sm text-muted-foreground">
-                    Evidence Hub · Upload Learning Evidence · Checkpoint {project.milestones.findIndex((m) => m.id === selectedMilestone) + 1}
+                    Evidence Hub · Upload Learning Evidence · Task {project.milestones.findIndex((m) => m.id === selectedMilestone) + 1}
                   </p>
                 )}
 
                 {/* Upload Learning Evidence — tabs: Article URL | Upload PDF */}
-                <Card>
-                  <CardHeader>
+            <Card>
+              <CardHeader>
                     <CardTitle>Upload Learning Evidence</CardTitle>
                     <CardDescription>
                       {selectedMilestone
-                        ? `Submitting for Checkpoint ${project.milestones.findIndex((m) => m.id === selectedMilestone) + 1}. Add at least one: article URL or PDF. Then review the rubric and click Review and submit.`
-                        : 'Select a checkpoint in Step 1 first.'}
+                        ? `Submitting for Task ${project.milestones.findIndex((m) => m.id === selectedMilestone) + 1}. Add at least one: article URL or PDF. Review the rubric for reference, then click Submit evidence.`
+                        : 'Select a task in Step 1 first.'}
                     </CardDescription>
-                    {selectedMilestone && (
+                    {selectedMilestone && !articleMatches && (
                       <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mt-2">
                         At least one is required: submit an article URL or upload a PDF before you can continue.
                       </p>
                     )}
-                  </CardHeader>
+              </CardHeader>
                   <CardContent className="space-y-6">
                     <Tabs value={evidenceInputTab} onValueChange={(v) => setEvidenceInputTab(v as 'article-url' | 'upload-pdf')} className="w-full">
                       <TabsList className="grid w-full max-w-md grid-cols-2 h-11 bg-gray-100 p-1 rounded-lg border border-gray-200">
@@ -736,7 +771,7 @@ function StudentProjectContent() {
                         </div>
                         {articleMatches && articleUrl && (
                           <div className="rounded-lg border border-green-200 bg-green-50/50 p-3 text-sm text-green-800">
-                            Article submitted. Matches shown on rubric criteria below.
+                            Article submitted. You'll see how it matches the rubric after submitting below.
                           </div>
                         )}
                       </TabsContent>
@@ -789,20 +824,20 @@ function StudentProjectContent() {
                         )}
                         {articleMatches && uploadedFile && (
                           <div className="rounded-lg border border-green-200 bg-green-50/50 p-3 text-sm text-green-800">
-                            PDF submitted. Matches shown on rubric criteria below.
-                          </div>
+                            PDF submitted. You'll see how it matches the rubric after submitting below.
+                  </div>
                         )}
                       </TabsContent>
                     </Tabs>
-                  </CardContent>
-                </Card>
+              </CardContent>
+            </Card>
 
                 {/* Assessment Rubric — for reference only; no submitted article match status here */}
-                <Card>
-                  <CardHeader>
+            <Card>
+              <CardHeader>
                     <CardTitle>Assessment Rubric</CardTitle>
                     <CardDescription>For reference only. Criteria and levels for this project.</CardDescription>
-                  </CardHeader>
+              </CardHeader>
                   <CardContent className="space-y-6">
                     {rubricCategories.map((cat) => (
                         <div key={cat.title} className="space-y-3">
@@ -831,7 +866,7 @@ function StudentProjectContent() {
                               )
                             })}
                           </div>
-                        </div>
+                      </div>
                     ))}
                   </CardContent>
                 </Card>
@@ -848,14 +883,14 @@ function StudentProjectContent() {
                       onClick={() => handleSubmit({ goToEvidenceGallery: true })}
                       disabled={(!articleUrl.trim() && !uploadedFile) || submitting}
                     >
-                      {submitting ? 'Submitting...' : 'Review and submit'}
+                      {submitting ? 'Submitting...' : 'Submit evidence'}
                     </Button>
                   </div>
-                </div>
-              </div>
-            )}
+                    </div>
+                  </div>
+                )}
 
-            {/* Step 3: Evidence Gallery — final submission (after Review and submit) */}
+            {/* Step 3: Evidence Gallery — shown after Submit evidence */}
             {submitStep === 3 && (
               <div className="space-y-6">
                 <p className="text-sm text-muted-foreground">
@@ -898,7 +933,7 @@ function StudentProjectContent() {
                             Note: This article may not be suitable for demonstrating all rubric criteria. Consider submitting additional articles or resources to cover the remaining criteria.
                           </p>
                           {(articleMatches?.length ?? 0) > 0 ? (
-                            <div className="space-y-2">
+                <div className="space-y-2">
                               {articleMatches?.map((m, idx) => (
                                 <div
                                   key={`${m.criterion}-${idx}`}
@@ -921,19 +956,19 @@ function StudentProjectContent() {
                                   </Badge>
                                 </div>
                               ))}
-                            </div>
+                </div>
                           ) : (
                             <p className="text-xs text-muted-foreground">Your evidence will be matched to rubric criteria.</p>
-                          )}
-                          <Button
+                )}
+                <Button
                             variant="outline"
                             size="sm"
                             className="w-full"
                             onClick={() => setSubmitStep(2)}
-                          >
-                            <Upload className="h-4 w-4 mr-2" />
+                >
+                  <Upload className="h-4 w-4 mr-2" />
                             Add More Learning Evidence
-                          </Button>
+                </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -945,9 +980,9 @@ function StudentProjectContent() {
                   <CardHeader>
                     <CardTitle>Evidence Gallery</CardTitle>
                     <CardDescription>
-                      Your learning evidence for this checkpoint.
+                      Your learning evidence for this task.
                     </CardDescription>
-                  </CardHeader>
+                    </CardHeader>
                   <CardContent>
                     {selectedMilestone && (() => {
                       const forCheckpoint = evidence.filter((ev) => ev.milestoneId === selectedMilestone)
@@ -987,7 +1022,7 @@ function StudentProjectContent() {
                                 <div className="aspect-[4/3] rounded bg-muted flex items-center justify-center">
                                   <FileText className="h-10 w-10 text-muted-foreground" />
                                 </div>
-                                <p className="text-xs font-medium">Checkpoint {checkpointNum}</p>
+                                <p className="text-xs font-medium">Task {checkpointNum}</p>
                                 <p className="text-[11px] text-muted-foreground">
                                   {new Date(ev.submittedAt).toLocaleDateString()} · {avgScore}/4
                                 </p>
@@ -1001,7 +1036,7 @@ function StudentProjectContent() {
                   </CardContent>
                 </Card>
 
-                {/* Footer: Done with this checkpoint | Take assessment (optional) */}
+                {/* Footer: Done with this task | Take assessment (optional) */}
                 <div className="flex flex-col sm:flex-row justify-center items-center gap-3 pt-4">
                   <Button
                     variant="outline"
@@ -1015,7 +1050,7 @@ function StudentProjectContent() {
                     }}
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Done with this checkpoint
+                    Done with this task
                   </Button>
                   <Button
                     variant="secondary"
@@ -1026,9 +1061,9 @@ function StudentProjectContent() {
                     Take assessment (optional)
                   </Button>
                 </div>
-              </div>
-            )}
-
+                              </div>
+                            )}
+                            
             {/* Step 4: Assessment — questions and answers */}
             {submitStep === 4 && (
               <Card className="border-stone-200 bg-stone-50/80">
@@ -1055,10 +1090,125 @@ function StudentProjectContent() {
                       </Button>
                     </div>
                   ) : assessmentSubmitted ? (
-                    <div className="rounded-lg border border-stone-200 bg-white p-6 text-center space-y-4">
-                      <p className="text-sm font-medium text-green-700">Assessment submitted. Thanks for completing the check.</p>
-                      <p className="text-xs text-muted-foreground">You can go back to Evidence Gallery or return to the project overview.</p>
-                    </div>
+                    (() => {
+                      const forTask = selectedMilestone ? evidence.filter((ev) => ev.milestoneId === selectedMilestone) : []
+                      const latestEv = [...forTask].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0]
+                      const aiFeedbacks = latestEv ? getFeedbackByEvidence(latestEv.id) : []
+                      const avgScore = aiFeedbacks.length > 0 ? aiFeedbacks.reduce((s, f) => s + f.score, 0) / aiFeedbacks.length : (assessmentResults[selectedMilestone!]?.score ?? 1)
+                      const levelLabel = assessmentResults[selectedMilestone!]?.levelLabel ?? (avgScore >= 3.5 ? 'Advanced' : avgScore >= 2.5 ? 'Proficient' : avgScore >= 1.5 ? 'Developing' : 'Beginning')
+                      const displayScore = Math.round(avgScore)
+                      const note = assessmentResults[selectedMilestone!]?.note ?? (aiFeedbacks.length > 0 ? `Overall performance: ${avgScore.toFixed(1)}/4 across rubric criteria.` : '')
+                      const mapCriterionToRubric = (criterionId: string) => {
+                        const idx = parseInt(criterionId.replace(/\D/g, ''), 10) - 1
+                        return rubricCategories[Math.max(0, Math.min(idx, rubricCategories.length - 1))]
+                      }
+                      return (
+                        <div className="space-y-6">
+                          {/* Breadcrumb */}
+                          <p className="text-xs text-muted-foreground">
+                            Evidence Hub · Take Assessment · <span className="font-medium text-foreground">Assessment Result</span>
+                          </p>
+                          {/* Project info */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-foreground">{project?.title}</span>
+                            {classNamesForProject[0] && (
+                              <Badge variant="secondary" className="bg-gray-100 text-gray-700">{classNamesForProject[0]}</Badge>
+                            )}
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">{subjectTag}</Badge>
+                          </div>
+                          {/* Assessment Analysis */}
+                          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                            <div className="flex items-center gap-2 px-4 py-3 border-b bg-gray-50">
+                              <h3 className="font-semibold text-foreground">Assessment Analysis</h3>
+                              <Badge variant="secondary" className="text-[10px]">AI Generated</Badge>
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-[1fr,1fr] p-4">
+                              {/* Left: Current Submission */}
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground mb-2">Current Submission</p>
+                                <div className="rounded-lg border border-gray-200 bg-gray-100 min-h-[200px] p-4">
+                                  {latestEv ? (
+                                    <div className="text-sm text-foreground space-y-2">
+                                      <p className="line-clamp-6">{latestEv.content}</p>
+                                      <p className="text-xs text-muted-foreground">{new Date(latestEv.submittedAt).toLocaleDateString()}</p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">No submission to display.</p>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Right: Overall result */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span
+                                    className={`h-2 w-2 rounded-full ${
+                                      displayScore >= 3 ? 'bg-green-500' : displayScore >= 2 ? 'bg-amber-500' : 'bg-red-500'
+                                    }`}
+                                    aria-hidden
+                                  />
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {levelLabel} ({displayScore})
+                                  </p>
+                                </div>
+                                <p className="text-sm text-muted-foreground">{note}</p>
+                              </div>
+                            </div>
+                            {/* Rubric breakdown */}
+                            <div className="border-t p-4 space-y-4">
+                              {(aiFeedbacks.length > 0
+                                ? aiFeedbacks
+                                : rubricCategories.map((_, i) => ({ criterionId: `c${i + 1}`, score: displayScore }))
+                              ).map((fb: { criterionId: string; score: number }) => {
+                                const rubric = mapCriterionToRubric(fb.criterionId)
+                                if (!rubric) return null
+                                return (
+                                  <div key={fb.criterionId} className="space-y-2">
+                                    <p className="font-medium text-sm">{rubric.title}</p>
+                                    <p className="text-xs text-muted-foreground">{rubric.subtitle}</p>
+                                    <div className="grid grid-cols-4 gap-2">
+                                      {[4, 3, 2, 1].map((levelScore, idx) => {
+                                        const isAchieved = fb.score === levelScore
+                                        const levelColors: Record<number, { bg: string; border: string; text: string }> = {
+                                          4: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-900' },
+                                          3: { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-900' },
+                                          2: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900' },
+                                          1: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-900' },
+                                        }
+                                        const c = levelColors[levelScore]
+                                        const achievedRing = isAchieved ? ' ring-2 ring-offset-1 ring-gray-800' : ''
+                                        return (
+                                          <div key={levelScore} className={`rounded-lg border p-3 text-xs ${c.bg} ${c.border}${achievedRing}`}>
+                                            <p className={`font-semibold mb-1 ${c.text}`}>{levelScore}</p>
+                                            <p className={`leading-snug ${isAchieved ? c.text : 'text-muted-foreground'}`}>{rubric.levels[3 - idx]}</p>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            {/* Action buttons */}
+                            <div className="flex flex-wrap gap-3 p-4 border-t bg-gray-50">
+                              <Button
+                                variant="outline"
+                                onClick={() => { setSubmitStep(1); setAssessmentStarted(false); setAssessmentAnswers({}); setAssessmentSubmitted(false) }}
+                              >
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                I&apos;m Happy with the Result
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                onClick={() => { setAssessmentStarted(false); setAssessmentAnswers({}); setAssessmentSubmitted(false) }}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Retake Assessment
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()
                   ) : (
                     <div className="rounded-lg border border-stone-200 bg-white p-6 space-y-6">
                       <p className="text-sm text-muted-foreground">Answer the following questions.</p>
@@ -1105,36 +1255,37 @@ function StudentProjectContent() {
                       >
                         Submit assessment
                       </Button>
+                              </div>
+                            )}
+
+                  {!assessmentSubmitted && (
+                    <div className="flex justify-between gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSubmitStep(3)
+                          setAssessmentStarted(false)
+                          setAssessmentAnswers({})
+                          setAssessmentSubmitted(false)
+                        }}
+                      >
+                        Back to Evidence Gallery
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setSubmitStep(1)
+                          setAssessmentStarted(false)
+                          setAssessmentAnswers({})
+                          setAssessmentSubmitted(false)
+                        }}
+                      >
+                        Done for now
+                      </Button>
                     </div>
                   )}
-
-                  <div className="flex justify-between gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSubmitStep(3)
-                        setAssessmentStarted(false)
-                        setAssessmentAnswers({})
-                        setAssessmentSubmitted(false)
-                      }}
-                    >
-                      Back to Evidence Gallery
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setSubmitStep(1)
-                        setSubmitStep(1)
-                        setAssessmentStarted(false)
-                        setAssessmentAnswers({})
-                        setAssessmentSubmitted(false)
-                      }}
-                    >
-                      Done for now
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
             )}
       </main>
     </div>

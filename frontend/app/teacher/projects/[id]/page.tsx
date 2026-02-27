@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AuthGuard } from '@/components/auth-guard'
 import {
@@ -37,6 +37,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/hooks/use-toast'
 
+const REALTIME_KEYS = ['eduflow_evidence', 'eduflow_feedback', 'eduflow_progress', 'eduflow_flags']
+
 function ProjectDetailContent() {
   const router = useRouter()
   const params = useParams()
@@ -65,13 +67,12 @@ function ProjectDetailContent() {
     }
   }, [])
 
-  useEffect(() => {
+  const refreshData = useCallback(() => {
     const proj = getProject(params.id as string)
     if (proj) {
       setProject(proj)
       setProgress(getProgressByProject(proj.id))
       setFlags(dedupeById(getFlagsByProject(proj.id)))
-      // Default selected checkpoints: first two milestones (or first past-due + first active)
       const ms = proj.milestones
       const now = new Date()
       const pastDue = ms.find((m) => new Date(m.dueDate) < now && (!m.opensOn || new Date(m.opensOn) <= now))
@@ -90,6 +91,21 @@ function ProjectDetailContent() {
       }
     }
   }, [params.id])
+
+  useEffect(() => {
+    refreshData()
+  }, [refreshData])
+
+  // Real-time updates when a student submits in another tab (storage event)
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key && REALTIME_KEYS.includes(e.key)) {
+        refreshData()
+      }
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [refreshData])
 
   const handlePublish = () => {
     if (project) {
@@ -203,13 +219,10 @@ function ProjectDetailContent() {
               <Badge variant="outline" className="bg-white">
                 {subjectTag}
               </Badge>
-              <Badge variant={project.status === 'published' ? 'default' : 'secondary'}>
-                {project.status}
+              <Badge variant="default">
+                Published
               </Badge>
             </div>
-            {project.status === 'draft' && (
-              <Button onClick={handlePublish}>Publish Project</Button>
-            )}
           </div>
         </div>
       </header>
@@ -274,7 +287,7 @@ function ProjectDetailContent() {
 
         {/* Checkpoint Status */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Checkpoint Status</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Task Status</h2>
 
           {/* Timeline */}
           <div className="flex items-center gap-2 flex-wrap mb-6">
@@ -303,7 +316,7 @@ function ProjectDetailContent() {
                               ? 'border-primary bg-primary/5 text-primary'
                               : 'border-gray-200 bg-gray-50 text-gray-400'
                       }`}
-                      title={`Checkpoint ${index + 1}: ${m.name}`}
+                      title={`Task ${index + 1}: ${m.name}`}
                     >
                       {index + 1}
                     </button>

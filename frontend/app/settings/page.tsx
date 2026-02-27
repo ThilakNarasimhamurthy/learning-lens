@@ -92,7 +92,7 @@ export default function SettingsPage() {
                 Reset to Demo Data
               </Button>
               <p className="text-xs text-muted-foreground">
-                Seed: adds demo data when empty. Reset: clears all data and loads fresh demo (4 checkpoints with all states).
+                Seed: adds demo data when empty. Reset: clears all data and loads fresh demo (6 projects with all task states).
               </p>
             </div>
 
