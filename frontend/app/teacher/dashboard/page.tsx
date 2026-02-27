@@ -6,28 +6,23 @@ import { AuthGuard } from '@/components/auth-guard'
 import { getCurrentUser, logout, getUserById, login } from '@/lib/auth'
 import {
   getProjectsByTeacher,
-  getClassesByTeacher,
   getProgressByProject,
   getFlagsByProject,
   getProject,
   seedDemoData,
 } from '@/lib/data-store'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   BookOpen,
   Users,
   Plus,
   ChevronDown,
-  ChevronRight,
   AlertTriangle,
   Clock,
   RefreshCw,
   Bell,
   Sparkles,
-  CheckCircle,
 } from 'lucide-react'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,8 +35,6 @@ function DashboardContent() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [projects, setProjects] = useState<any[]>([])
-  const [classes, setClasses] = useState<any[]>([])
-  const [search, setSearch] = useState('')
   const [lastSynced, setLastSynced] = useState<Date>(new Date())
 
   useEffect(() => {
@@ -57,68 +50,14 @@ function DashboardContent() {
       setUser(current)
       seedDemoData()
       setProjects(dedupeById(getProjectsByTeacher(current.id)))
-      setClasses(dedupeById(getClassesByTeacher(current.id)))
     }
   }, [])
 
   const allFlags = dedupeById(projects.flatMap((p) => getFlagsByProject(p.id)))
   const needSupportCount = allFlags.length
-
-  const getClassStats = (cls: { id: string; name: string; studentIds: string[]; projectIds: string[] }) => {
-    const classProgress = cls.projectIds.flatMap((pid) =>
-      getProgressByProject(pid).filter((p) => cls.studentIds.includes(p.studentId))
-    )
-    const lastActivity = classProgress.reduce((max, p) => {
-      const d = p.lastActivityDate ? new Date(p.lastActivityDate).getTime() : 0
-      return d > max ? d : max
-    }, 0)
-    const avgScore =
-      classProgress.length > 0
-        ? (classProgress.reduce((s, p) => s + p.overallScore, 0) / classProgress.length / 4) * 100
-        : 0
-    const alertCount = allFlags.filter(
-      (f) => cls.projectIds.includes(f.projectId) && cls.studentIds.includes(f.studentId)
-    ).length
-    return {
-      lastActivity: lastActivity ? formatTimeAgo(lastActivity) : 'No activity',
-      avgProgress: Math.round(avgScore),
-      alertCount,
-    }
-  }
-
-  const getStudentProgressInClass = (cls: { studentIds: string[]; projectIds: string[] }) => {
-    return cls.studentIds.map((studentId) => {
-      const progressEntries = cls.projectIds.flatMap((pid) =>
-        getProgressByProject(pid).filter((p) => p.studentId === studentId)
-      )
-      const avgProgress =
-        progressEntries.length > 0
-          ? Math.round(
-              (progressEntries.reduce((s, p) => s + p.overallScore, 0) / progressEntries.length / 4) * 100
-            )
-          : 0
-      const lastActivity = progressEntries.reduce((max, p) => {
-        const d = p.lastActivityDate ? new Date(p.lastActivityDate).getTime() : 0
-        return d > max ? d : max
-      }, 0)
-      const status = progressEntries.some((p) => p.status === 'red')
-        ? 'red'
-        : progressEntries.some((p) => p.status === 'yellow')
-          ? 'yellow'
-          : progressEntries.length > 0
-            ? 'green'
-            : 'none'
-      return {
-        studentId,
-        name: getUserById(studentId)?.name ?? studentId,
-        avgProgress,
-        lastActivity: lastActivity ? formatTimeAgo(lastActivity) : 'No activity',
-        status,
-        projectCount: progressEntries.length,
-        totalProjects: cls.projectIds.length,
-      }
-    })
-  }
+  const uniqueStudentCount = new Set(
+    projects.flatMap((p) => getProgressByProject(p.id).map((x) => x.studentId))
+  ).size
 
   function formatTimeAgo(ms: number) {
     const mins = Math.floor((Date.now() - ms) / 60000)
@@ -128,14 +67,9 @@ function DashboardContent() {
     return `${Math.floor(hours / 24)}d ago`
   }
 
-  const filteredClasses = classes.filter(
-    (c) => !search.trim() || c.name.toLowerCase().includes(search.toLowerCase())
-  )
-
   const handleRefresh = () => {
     if (user) {
       setProjects(dedupeById(getProjectsByTeacher(user.id)))
-      setClasses(dedupeById(getClassesByTeacher(user.id)))
       setLastSynced(new Date())
     }
   }
@@ -150,14 +84,6 @@ function DashboardContent() {
             <h1 className="text-lg font-semibold text-gray-900">Teacher Dashboard</h1>
           </div>
           <div className="flex items-center gap-2">
-            <input
-              type="search"
-              placeholder="Search students, classes..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-64 rounded-md border border-gray-200 bg-gray-50/50 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300"
-              aria-label="Search"
-            />
             <button
               type="button"
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
@@ -192,23 +118,14 @@ function DashboardContent() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Summary stats — 4 KPI cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div className="border border-gray-200 rounded-lg p-4 bg-white">
-            <div className="flex items-center gap-2 text-gray-500 mb-1">
-              <BookOpen className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase tracking-wide">Total Classes</span>
-            </div>
-            <p className="text-2xl font-semibold text-gray-900">{classes.length}</p>
-          </div>
+        {/* Summary stats — 3 KPI cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
           <div className="border border-gray-200 rounded-lg p-4 bg-white">
             <div className="flex items-center gap-2 text-gray-500 mb-1">
               <Users className="h-4 w-4" />
               <span className="text-xs font-medium uppercase tracking-wide">Total Students</span>
             </div>
-            <p className="text-2xl font-semibold text-gray-900">
-              {classes.reduce((sum, c) => sum + c.studentIds.length, 0)}
-            </p>
+            <p className="text-2xl font-semibold text-gray-900">{uniqueStudentCount}</p>
           </div>
           <div className="border border-gray-200 rounded-lg p-4 bg-white">
             <div className="flex items-center gap-2 text-gray-500 mb-1">
@@ -238,37 +155,8 @@ function DashboardContent() {
           </Button>
         </div>
 
-        {/* Main content tabs: Overview, Classes, Support */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="w-full justify-start rounded-md bg-gray-100 text-gray-600 h-10">
-            <TabsTrigger
-              value="overview"
-              className="px-3 py-1.5 data-[state=active]:bg-white data-[state=active]:text-gray-900"
-            >
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="classes"
-              className="px-3 py-1.5 data-[state=active]:bg-white data-[state=active]:text-gray-900 flex items-center gap-1.5"
-            >
-              Classes
-              <span className="inline-flex items-center justify-center rounded-full bg-gray-200 text-gray-700 text-[11px] px-1.5 min-w-[20px]">
-                {classes.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="support"
-              className="px-3 py-1.5 data-[state=active]:bg-white data-[state=active]:text-gray-900 flex items-center gap-1.5"
-            >
-              Support
-              <span className="inline-flex items-center justify-center rounded-full bg-red-100 text-red-700 text-[11px] px-1.5 min-w-[20px]">
-                {allFlags.length}
-              </span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* ——— 1. OVERVIEW (projects snapshot) ——— */}
-          <TabsContent value="overview" className="space-y-6">
+        <div className="space-y-6">
+        {/* Projects */}
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -329,138 +217,8 @@ function DashboardContent() {
                 )}
               </div>
             </section>
-          </TabsContent>
 
-          {/* ——— 2. CLASSES ——— */}
-          <TabsContent value="classes" className="space-y-6">
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-600" />
-                  Classes
-                </h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push('/teacher/classes')}
-                  className="text-gray-600 border-gray-200"
-                >
-                  Manage
-                </Button>
-              </div>
-              <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
-                {filteredClasses.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500 text-sm">
-                    {search ? 'No classes match your search.' : 'No classes yet. Create one from Manage.'}
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-100">
-                    {filteredClasses.map((cls, classIndex) => {
-                      const stats = getClassStats(cls)
-                      return (
-                        <Collapsible key={`${cls.id}-${classIndex}`}>
-                          <div className="border-0">
-                            <CollapsibleTrigger asChild>
-                              <button className="group w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-gray-50/80 transition-colors">
-                                <ChevronRight className="h-4 w-4 text-gray-400 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-900 truncate">{cls.name}</p>
-                                  <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                                    <span className="flex items-center gap-1">
-                                      <Users className="h-3 w-3" />
-                                      {cls.studentIds.length} students
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
-                                      {stats.lastActivity}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-4 shrink-0">
-                                  <div className="w-24">
-                                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                      <div
-                                        className="h-full bg-gray-400 rounded-full"
-                                        style={{ width: `${Math.min(100, stats.avgProgress)}%` }}
-                                      />
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-0.5">Avg {stats.avgProgress}%</p>
-                                  </div>
-                                  {stats.alertCount > 0 && (
-                                    <span className="flex items-center justify-center h-7 min-w-[28px] rounded bg-red-50 text-red-600 text-xs font-medium">
-                                      <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                                      {stats.alertCount}
-                                    </span>
-                                  )}
-                                </div>
-                              </button>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50 space-y-4">
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Students & progress</p>
-                                  <ul className="space-y-1.5">
-                                    {getStudentProgressInClass(cls).map((s) => (
-                                      <li key={s.studentId} className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-gray-100/80">
-                                        <span className="shrink-0 w-5 flex items-center justify-center">
-                                          {s.status === 'green' && <CheckCircle className="h-4 w-4 text-green-500" />}
-                                          {s.status === 'yellow' && <Clock className="h-4 w-4 text-yellow-500" />}
-                                          {s.status === 'red' && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                                          {s.status === 'none' && <span className="h-2 w-2 rounded-full bg-gray-300" />}
-                                        </span>
-                                        <span className="text-sm font-medium text-gray-900 min-w-0 truncate flex-1">{s.name}</span>
-                                        <div className="shrink-0 flex items-center gap-2">
-                                          <div className="w-14 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                            <div
-                                              className="h-full bg-gray-500 rounded-full"
-                                              style={{ width: `${Math.min(100, s.avgProgress)}%` }}
-                                            />
-                                          </div>
-                                          <span className="text-xs text-gray-500 tabular-nums w-8">{s.avgProgress}%</span>
-                                          <span className="text-xs text-gray-400">{s.lastActivity}</span>
-                                        </div>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                                <div>
-                                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Projects</p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {cls.projectIds.map((pid: string) => {
-                                      const proj = getProject(pid)
-                                      return proj ? (
-                                        <button
-                                          key={pid}
-                                          onClick={() => router.push(`/teacher/projects/${pid}`)}
-                                          className="text-sm text-gray-700 hover:text-gray-900 hover:underline"
-                                        >
-                                          {proj.title}
-                                        </button>
-                                      ) : null
-                                    })}
-                                    <button
-                                      onClick={() => router.push('/teacher/projects/new')}
-                                      className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
-                                    >
-                                      <Plus className="h-3 w-3" />
-                                      New project
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </CollapsibleContent>
-                          </div>
-                        </Collapsible>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
-          </TabsContent>
-
-          {/* ——— 3. SUPPORT ——— */}
-          <TabsContent value="support" className="space-y-6">
+        {/* Support */}
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -524,8 +282,7 @@ function DashboardContent() {
                 )}
               </div>
             </section>
-          </TabsContent>
-        </Tabs>
+        </div>
 
         {/* Footer note */}
         <p className="text-xs text-gray-400 mt-8 text-center">

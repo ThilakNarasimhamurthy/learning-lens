@@ -17,14 +17,14 @@ import { DeadlineReminder } from '@/components/deadline-reminder'
 
 function StudentDashboardContent() {
   const router = useRouter()
-  const [user] = useState(getCurrentUser())
+  const [user, setUser] = useState<ReturnType<typeof getCurrentUser>>(null)
   const [classes, setClasses] = useState<any[]>([])
   const [joinCode, setJoinCode] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    // Ensure demo student user and demo data for full flow
+    // Load user from localStorage (client-only to avoid hydration mismatch)
     let current = getCurrentUser()
     if (!current) {
       const demo = login('student1@demo.com', 'demo')
@@ -32,6 +32,7 @@ function StudentDashboardContent() {
         current = demo
       }
     }
+    setUser(current)
     if (current) {
       seedDemoData()
       setClasses(getClassesByStudent(current.id))
@@ -63,8 +64,10 @@ function StudentDashboardContent() {
     router.push('/login')
   }
 
-  // Get all projects from enrolled classes
-  const allProjects = classes.flatMap(c => getProjectsByIds(c.projectIds))
+  // Get all projects from enrolled classes (dedupe by id when project appears in multiple classes)
+  const allProjects = Array.from(
+    new Map(classes.flatMap(c => getProjectsByIds(c.projectIds)).map(p => [p.id, p])).values()
+  )
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -92,6 +95,7 @@ function StudentDashboardContent() {
         <DeadlineReminder />
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+          {/* My Classes stat card — commented out for now
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">My Classes</CardTitle>
@@ -101,6 +105,7 @@ function StudentDashboardContent() {
               <div className="text-2xl font-bold">{classes.length}</div>
             </CardContent>
           </Card>
+          */}
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -114,6 +119,7 @@ function StudentDashboardContent() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
+          {/* My Classes — commented out for now
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -172,6 +178,7 @@ function StudentDashboardContent() {
               )}
             </CardContent>
           </Card>
+          */}
 
           <Card>
             <CardHeader>

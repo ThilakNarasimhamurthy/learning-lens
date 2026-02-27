@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { clearAllData, seedDemoData } from '@/lib/data-store'
@@ -10,7 +10,13 @@ import { ArrowLeft, Trash2, Database } from 'lucide-react'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const [user] = useState(getCurrentUser())
+  const [user, setUser] = useState<ReturnType<typeof getCurrentUser>>(null)
+
+  useEffect(() => {
+    const u = getCurrentUser()
+    setUser(u)
+    if (!u) router.push('/login')
+  }, [router])
 
   const handleClearData = () => {
     if (confirm('Are you sure? This will delete all projects, classes, and submissions.')) {
@@ -26,9 +32,20 @@ export default function SettingsPage() {
     window.location.reload()
   }
 
+  const handleResetToDemo = () => {
+    if (confirm('Replace all data with fresh demo data? This will clear everything first.')) {
+      seedDemoData({ force: true })
+      alert('Reset complete! Refreshing...')
+      window.location.reload()
+    }
+  }
+
   if (!user) {
-    router.push('/login')
-    return null
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
   }
 
   return (
@@ -66,8 +83,16 @@ export default function SettingsPage() {
                 <Database className="h-4 w-4 mr-2" />
                 Seed Demo Data
               </Button>
+              <Button
+                variant="outline"
+                onClick={handleResetToDemo}
+                className="w-full justify-start"
+              >
+                <Database className="h-4 w-4 mr-2" />
+                Reset to Demo Data
+              </Button>
               <p className="text-xs text-muted-foreground">
-                Add a sample project and class for testing (teacher account only)
+                Seed: adds demo data when empty. Reset: clears all data and loads fresh demo (4 checkpoints with all states).
               </p>
             </div>
 

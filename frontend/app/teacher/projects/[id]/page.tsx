@@ -3,17 +3,28 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AuthGuard } from '@/components/auth-guard'
-import { getProject, updateProject, getProgressByProject, getClassesByTeacher, getFlagsByProject, resolveFlag, assignProjectToClass, getEvidenceByStudent, getFeedbackByEvidence } from '@/lib/data-store'
+import {
+  getProject,
+  updateProject,
+  getProgressByProject,
+  getClassesByTeacher,
+  getFlagsByProject,
+  assignProjectToClass,
+  getEvidenceByProject,
+} from '@/lib/data-store'
 import { dedupeById } from '@/lib/utils'
 import { getCurrentUser, getUserById } from '@/lib/auth'
 import type { Project, StudentProgress, Flag } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, AlertCircle, CheckCircle, Clock, AlertTriangle, XCircle, ChevronDown, ChevronUp, FileText, HelpCircle } from 'lucide-react'
+import {
+  ArrowLeft,
+  AlertTriangle,
+  Rocket,
+  Trophy,
+  BarChart3,
+} from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -29,12 +40,12 @@ import { toast } from '@/hooks/use-toast'
 function ProjectDetailContent() {
   const router = useRouter()
   const params = useParams()
-  const [user] = useState(getCurrentUser())
+  const [user, setUser] = useState<ReturnType<typeof getCurrentUser>>(null)
   const [project, setProject] = useState<Project | null>(null)
   const [progress, setProgress] = useState<StudentProgress[]>([])
   const [flags, setFlags] = useState<Flag[]>([])
   const [classes, setClasses] = useState<any[]>([])
-  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null)
+  const [selectedCheckpoints, setSelectedCheckpoints] = useState<string[]>([])
   const [messageDialogOpen, setMessageDialogOpen] = useState(false)
   const [messageDialogRecipient, setMessageDialogRecipient] = useState('')
   const [messageDialogType, setMessageDialogType] = useState<'message' | 'guidance'>('message')
@@ -43,13 +54,16 @@ function ProjectDetailContent() {
   const [messageSentForFlagIds, setMessageSentForFlagIds] = useState<Set<string>>(new Set())
   const [messageDialogFlagId, setMessageDialogFlagId] = useState<string | null>(null)
 
-  const assignedClasses = project ? classes.filter(c => c.projectIds.includes(project.id)) : []
+  const assignedClasses = project ? classes.filter((c) => c.projectIds.includes(project.id)) : []
+  const subjectTag = project?.standards?.[0]?.category || 'Project'
 
   useEffect(() => {
-    if (user) {
-      setClasses(dedupeById(getClassesByTeacher(user.id)))
+    const u = getCurrentUser()
+    setUser(u)
+    if (u) {
+      setClasses(dedupeById(getClassesByTeacher(u.id)))
     }
-  }, [user])
+  }, [])
 
   useEffect(() => {
     const proj = getProject(params.id as string)
@@ -57,6 +71,23 @@ function ProjectDetailContent() {
       setProject(proj)
       setProgress(getProgressByProject(proj.id))
       setFlags(dedupeById(getFlagsByProject(proj.id)))
+      // Default selected checkpoints: first two milestones (or first past-due + first active)
+      const ms = proj.milestones
+      const now = new Date()
+      const pastDue = ms.find((m) => new Date(m.dueDate) < now && (!m.opensOn || new Date(m.opensOn) <= now))
+      const active = ms.find((m) => {
+        const due = new Date(m.dueDate)
+        const open = m.opensOn ? new Date(m.opensOn) : null
+        return (!open || open <= now) && due >= now
+      })
+      const toShow = [pastDue, active].filter(Boolean).map((m) => m!.id)
+      if (toShow.length >= 2) {
+        setSelectedCheckpoints(toShow.slice(0, 2))
+      } else if (ms.length >= 2) {
+        setSelectedCheckpoints([ms[0].id, ms[1].id])
+      } else if (ms.length === 1) {
+        setSelectedCheckpoints([ms[0].id])
+      }
     }
   }, [params.id])
 
@@ -84,7 +115,7 @@ function ProjectDetailContent() {
         : `${action} sent to ${messageDialogRecipient}.`,
     })
     if (messageDialogType === 'message' && messageDialogFlagId) {
-      setMessageSentForFlagIds(prev => new Set(prev).add(messageDialogFlagId))
+      setMessageSentForFlagIds((prev) => new Set(prev).add(messageDialogFlagId))
     }
     setMessageDialogOpen(false)
     setMessageBody('')
@@ -95,7 +126,7 @@ function ProjectDetailContent() {
     if (!user || !project || !selectedClassIdToAssign) return
     const classId = selectedClassIdToAssign
     const success = assignProjectToClass(classId, project.id)
-    const classData = classes.find(c => c.id === classId)
+    const classData = classes.find((c) => c.id === classId)
     const className = classData?.name || 'class'
     if (success) {
       toast({
@@ -113,22 +144,68 @@ function ProjectDetailContent() {
     }
   }
 
-  if (!project) return <div>Loading...</div>
+  if (!project) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
 
-  const flaggedStudents = progress.filter(p => p.status === 'red' || p.status === 'yellow')
+  const totalStudents = progress.length
+  const evidenceByProject = getEvidenceByProject(project.id)
+
+  const getMilestoneState = (m: (typeof project.milestones)[0]) => {
+    const now = new Date()
+    const dueDate = new Date(m.dueDate)
+    const isNotOpenYet = m.opensOn && new Date(m.opensOn) > now
+    if (isNotOpenYet) return 'inactive'
+    if (dueDate < now) return 'past-due'
+    return 'active'
+  }
+
+  const getCompletedCountForMilestone = (milestoneId: string) => {
+    return new Set(
+      evidenceByProject.filter((e) => e.milestoneId === milestoneId).map((e) => e.studentId)
+    ).size
+  }
+
+  const getSupportNeededForMilestone = (milestoneId: string) => {
+    const completed = new Set(
+      evidenceByProject.filter((e) => e.milestoneId === milestoneId).map((e) => e.studentId)
+    )
+    return progress
+      .filter((p) => !completed.has(p.studentId))
+      .map((p) => getUserById(p.studentId)?.name ?? p.studentId)
+      .slice(0, 5)
+  }
+
+  const getStudentGroup = (studentId: string) => {
+    const cls = assignedClasses.find((c) => c.studentIds.includes(studentId))
+    return cls?.name ?? '—'
+  }
+
+  const displayCheckpoints = selectedCheckpoints.length > 0
+    ? project.milestones.filter((m) => selectedCheckpoints.includes(m.id))
+    : project.milestones.slice(0, 2)
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header */}
       <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Button variant="ghost" onClick={() => router.back()}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <Button variant="ghost" onClick={() => router.back()} className="mb-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <div className="flex justify-between items-start mt-2">
-            <div>
-              <h1 className="text-2xl font-bold">{project.title}</h1>
-              <Badge className="mt-2">{project.status}</Badge>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-bold text-gray-900">{project.title}</h1>
+              {assignedClasses[0] && (
+                <Badge variant="secondary" className="bg-gray-100 text-gray-700">
+                  {assignedClasses[0].name}
+                </Badge>
+              )}
+              <Badge variant="outline" className="bg-white">
+                {subjectTag}
+              </Badge>
+              <Badge variant={project.status === 'published' ? 'default' : 'secondary'}>
+                {project.status}
+              </Badge>
             </div>
             {project.status === 'draft' && (
               <Button onClick={handlePublish}>Publish Project</Button>
@@ -137,338 +214,244 @@ function ProjectDetailContent() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-11 bg-gray-100 p-1 rounded-lg">
-            <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="progress" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              Student Progress
-            </TabsTrigger>
-            <TabsTrigger value="flags" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-1.5">
-              Active Flags
-              {flags.length > 0 && (
-                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-100 px-1.5 text-xs font-medium text-red-700">
-                  {flags.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="help" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-1.5">
-              Need Help
-              {flaggedStudents.length > 0 && (
-                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-700">
-                  {flaggedStudents.length}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="mt-6 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium">Description</p>
-                  <p className="text-sm text-muted-foreground">{project.description}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Task Type</p>
-                  <p className="text-sm text-muted-foreground capitalize">{project.taskType}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Standards ({project.standards.length})</p>
-                  <div className="space-y-1 mt-2">
-                    {project.standards.map(s => (
-                      <p key={s.id} className="text-xs text-muted-foreground">{s.code}: {s.description}</p>
-                    ))}
-                  </div>
-                </div>
-                {project.attachments && project.attachments.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium">Images & documents</p>
-                    <div className="flex flex-wrap gap-3 mt-2">
-                      {project.attachments.map(att => (
-                        <div key={att.id} className="border rounded-lg overflow-hidden bg-gray-50">
-                          {att.type === 'image' && att.url ? (
-                            <a href={att.url} target="_blank" rel="noopener noreferrer" className="block">
-                              <img src={att.url} alt={att.name} className="h-24 w-auto max-w-[200px] object-cover" />
-                            </a>
-                          ) : (
-                            <a
-                              href={att.url || '#'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`flex items-center gap-2 p-3 min-w-[140px] ${att.url ? 'text-primary hover:underline' : 'cursor-default pointer-events-none'}`}
-                            >
-                              <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
-                              <span className="text-sm truncate">{att.name}</span>
-                            </a>
-                          )}
-                          <p className="text-xs text-muted-foreground px-2 py-1 truncate max-w-[200px]">{att.name}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Assign to Class</CardTitle>
-                <CardDescription>Make this project available to students in a class. Select a class and click Assign.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {assignedClasses.length > 0 && (
-                  <div className="text-sm text-muted-foreground">
-                    Assigned to: {assignedClasses.map(c => c.name).join(', ')}
-                  </div>
-                )}
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Select
-                    value={selectedClassIdToAssign}
-                    onValueChange={setSelectedClassIdToAssign}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        {/* Support Alert */}
+        <section>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Support Alert</h2>
+          {flags.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No students currently flagged for support.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {flags.map((flag) => {
+                const isHigh = flag.severity === 'high'
+                return (
+                  <div
+                    key={flag.id}
+                    className="flex items-start gap-4 p-4 rounded-lg border bg-white shadow-sm hover:shadow transition-shadow"
                   >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select a class to assign" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {classes.map((c, index) => (
-                        <SelectItem key={`${c.id}-${index}`} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    onClick={handleAssignToClass}
-                    disabled={!selectedClassIdToAssign}
-                    className="shrink-0"
-                  >
-                    Assign to class
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Milestones ({project.milestones.length})</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {project.milestones.map(m => (
-                  <div key={m.id} className="p-3 border rounded">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-sm">{m.name}</p>
-                        <p className="text-xs text-muted-foreground">{m.description}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{new Date(m.dueDate).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="progress" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Student Progress</CardTitle>
-                <CardDescription>{progress.length} students · Expand a row to see submission details</CardDescription>
-              </CardHeader>
-              <CardContent>
-            {progress.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No student submissions yet. Assign this project to a class so students can see it and submit work.</p>
-            ) : (
-              <div className="space-y-1">
-                {progress.map(p => {
-                  const studentName = getUserById(p.studentId)?.name ?? p.studentId
-                  const evidence = dedupeById(getEvidenceByStudent(p.studentId, project.id))
-                  const isExpanded = expandedStudentId === p.studentId
-                  const lastActivity = p.lastActivityDate ? new Date(p.lastActivityDate).toLocaleDateString() : '—'
-                  return (
-                    <Collapsible
-                      key={p.studentId}
-                      open={isExpanded}
-                      onOpenChange={(open) => setExpandedStudentId(open ? p.studentId : null)}
-                    >
-                      <div className="border rounded-lg p-3 hover:bg-gray-50/50">
-                        <div className="flex items-center justify-between gap-4 flex-wrap">
-                          <div className="flex items-center gap-3 min-w-0">
-                            {p.status === 'green' && <CheckCircle className="h-5 w-5 shrink-0 text-green-500" />}
-                            {p.status === 'yellow' && <Clock className="h-5 w-5 shrink-0 text-yellow-500" />}
-                            {p.status === 'red' && <AlertCircle className="h-5 w-5 shrink-0 text-red-500" />}
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{studentName}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {p.completedMilestones.length}/{project.milestones.length} milestones · {evidence.length} submission{evidence.length !== 1 ? 's' : ''} · Last: {lastActivity}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4 shrink-0">
-                            <span className="text-sm font-semibold tabular-nums">{(p.overallScore).toFixed(1)}<span className="text-muted-foreground font-normal">/4</span></span>
-                            <CollapsibleTrigger asChild>
-                              <Button size="sm" variant="ghost" className="text-muted-foreground">
-                                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                {isExpanded ? 'Less' : 'Details'}
-                              </Button>
-                            </CollapsibleTrigger>
-                          </div>
-                        </div>
-                        {p.flagReason && (
-                          <p className="text-xs text-amber-700 mt-1.5 pl-8">{p.flagReason}</p>
-                        )}
-                      </div>
-                      <CollapsibleContent>
-                        <div className="mt-1 mb-2 ml-2 pl-4 border-l-2 border-gray-200 space-y-3">
-                          {evidence.length === 0 ? (
-                            <p className="text-sm text-muted-foreground py-2">No submissions yet</p>
-                          ) : (
-                            evidence.map((ev, evIndex) => {
-                              const feedbacks = getFeedbackByEvidence(ev.id)
-                              const milestone = project.milestones.find(m => m.id === ev.milestoneId)
-                              const avg = feedbacks.length > 0
-                                ? (feedbacks.reduce((s, f) => s + f.score, 0) / feedbacks.length).toFixed(1)
-                                : '—'
-                              const firstGap = feedbacks.find(f => f.gaps.length > 0)?.gaps[0]
-                              return (
-                                <div key={`${p.studentId}-${ev.id}-${evIndex}`} className="py-2">
-                                  <p className="text-sm font-medium text-gray-900">
-                                    {milestone?.name ?? ev.milestoneId} · {new Date(ev.submittedAt).toLocaleDateString()}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    Score: {avg}/4
-                                  </p>
-                                  {ev.content && (
-                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{ev.content}</p>
-                                  )}
-                                  {firstGap && (
-                                    <p className="text-xs text-amber-700 mt-1">Note: {firstGap}</p>
-                                  )}
-                                </div>
-                              )
-                            })
-                          )}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-          </TabsContent>
-
-          <TabsContent value="flags" className="mt-6">
-            <Card className="border-red-200 bg-red-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                  Active Flags ({flags.length})
-                </CardTitle>
-                <CardDescription>Students requiring intervention</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {flags.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No flags for this project.</p>
-                ) : (
-                  flags.map((flag, idx) => (
-                    <div key={`${flag.id}-${idx}`} className="p-4 bg-white border rounded">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                          {flag.severity === 'high' && <XCircle className="h-4 w-4 text-red-500" />}
-                          {flag.severity === 'medium' && <AlertCircle className="h-4 w-4 text-yellow-500" />}
-                          {flag.severity === 'low' && <AlertCircle className="h-4 w-4 text-blue-500" />}
-                          <p className="text-sm font-medium">{getUserById(flag.studentId)?.name ?? flag.studentId}</p>
-                        </div>
-                        <Badge variant={flag.severity === 'high' ? 'destructive' : 'secondary'}>
-                          {flag.flagType.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">{flag.reason}</p>
-                      <div className="p-2 bg-blue-50 rounded text-sm text-blue-900 mb-2">
-                        <p className="font-medium">💡 Suggested Intervention:</p>
-                        <p>{flag.suggestedIntervention}</p>
-                      </div>
-                      <div className="flex gap-2 flex-wrap">
-                        {messageSentForFlagIds.has(flag.id) ? (
-                          <Button size="sm" variant="secondary" disabled className="shrink-0">
-                            Message sent
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="shrink-0"
-                            onClick={() => openMessageDialog(getUserById(flag.studentId)?.name ?? flag.studentId, 'message', flag.id)}
-                          >
-                            Send Message
-                          </Button>
-                        )}
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          className="shrink-0"
-                          onClick={() => {
-                            resolveFlag(flag.id)
-                            setFlags(dedupeById(getFlagsByProject(project?.id || '')))
-                          }}
-                        >
-                          Mark Resolved
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="help" className="mt-6">
-            <Card className="border-yellow-200 bg-yellow-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <HelpCircle className="h-5 w-5 text-yellow-600" />
-                  Need Help ({flaggedStudents.length})
-                </CardTitle>
-                <CardDescription>Students with low scores or missed milestones</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {flaggedStudents.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No students need help for this project.</p>
-                ) : (
-                  flaggedStudents.map(p => (
-                    <div key={p.studentId} className="p-3 bg-white border rounded">
-                      <p className="text-sm font-medium">{getUserById(p.studentId)?.name ?? p.studentId}</p>
-                      <p className="text-xs text-muted-foreground">{p.flagReason}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Last activity: {p.lastActivityDate ? new Date(p.lastActivityDate).toLocaleDateString() : 'Never'}
+                    <span
+                      className={`mt-1 h-3 w-3 rounded-full shrink-0 ${
+                        isHigh ? 'bg-red-500' : 'bg-amber-500'
+                      }`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900">
+                        {getUserById(flag.studentId)?.name ?? flag.studentId}
                       </p>
+                      <Badge variant="secondary" className="mt-1 text-xs">
+                        {subjectTag}
+                      </Badge>
+                      <p className="text-sm text-muted-foreground mt-2">{flag.reason}</p>
                       <Button
-                        size="sm"
                         variant="outline"
+                        size="sm"
                         className="mt-2"
-                        onClick={() => openMessageDialog(getUserById(p.studentId)?.name ?? p.studentId, 'guidance')}
+                        onClick={() =>
+                          openMessageDialog(
+                            getUserById(flag.studentId)?.name ?? flag.studentId,
+                            'message',
+                            flag.id
+                          )
+                        }
                       >
-                        Send Guidance
+                        Send Message
                       </Button>
                     </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      aria-label="View progress"
+                    >
+                      <BarChart3 className="h-4 w-4 text-gray-500" />
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Checkpoint Status */}
+        <section>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Checkpoint Status</h2>
+
+          {/* Timeline */}
+          <div className="flex items-center gap-2 flex-wrap mb-6">
+            <Rocket className="h-5 w-5 text-red-500 shrink-0" />
+            <div className="flex-1 flex items-center gap-1 min-w-0 overflow-x-auto pb-2">
+              {project.milestones.map((m, index) => {
+                const state = getMilestoneState(m)
+                const isSelected = selectedCheckpoints.includes(m.id)
+                return (
+                  <div key={m.id} className="flex items-center flex-1 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCheckpoints((prev) => {
+                          const next = prev.filter((id) => id !== m.id)
+                          if (next.length < 2) return [...next, m.id]
+                          return [next[0], m.id]
+                        })
+                      }}
+                      className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 transition-colors font-semibold text-sm ${
+                        isSelected
+                          ? 'border-gray-900 bg-gray-100 text-gray-900 ring-2 ring-gray-900/20'
+                          : state === 'past-due'
+                            ? 'border-red-300 bg-red-50 text-red-700'
+                            : state === 'active'
+                              ? 'border-primary bg-primary/5 text-primary'
+                              : 'border-gray-200 bg-gray-50 text-gray-400'
+                      }`}
+                      title={`Checkpoint ${index + 1}: ${m.name}`}
+                    >
+                      {index + 1}
+                    </button>
+                    {index < project.milestones.length - 1 && (
+                      <div className="flex-1 h-0.5 bg-gray-200 min-w-[8px] mx-1" />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <Trophy className="h-5 w-5 text-amber-500 shrink-0" />
+          </div>
+
+          {/* Checkpoint detail cards */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {displayCheckpoints.map((m, idx) => {
+              const state = getMilestoneState(m)
+              const completedCount = getCompletedCountForMilestone(m.id)
+              const supportNeeded = getSupportNeededForMilestone(m.id)
+              const isPastDue = state === 'past-due'
+              return (
+                <div
+                  key={m.id}
+                  className="rounded-lg border bg-gray-100/80 p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-300 text-sm font-medium text-gray-700">
+                      {project.milestones.indexOf(m) + 1}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {isPastDue ? 'PAST DUE ' : ''}
+                      {new Date(m.dueDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <h3 className="font-medium text-gray-900">Learn: {m.name}</h3>
+                  <p className="text-sm text-muted-foreground">{m.description}</p>
+                  <p className="text-sm font-medium">
+                    Task Completed: {completedCount}/{totalStudents || 1}
+                  </p>
+                  {supportNeeded.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">Support Needed:</p>
+                      <p className="text-sm text-muted-foreground">
+                        {supportNeeded.join(', ')}
+                        {supportNeeded.length >= 5 ? '…' : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* Skill Snapshot */}
+        <section>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Skill Snapshot</h2>
+          <div className="rounded-lg border bg-white overflow-hidden">
+            {progress.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No student submissions yet. Assign this project to a class so students can get started.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-gray-50">
+                      <th className="text-left font-medium text-gray-700 px-4 py-3">Name</th>
+                      <th className="text-left font-medium text-gray-700 px-4 py-3">Group</th>
+                      <th className="text-left font-medium text-gray-700 px-4 py-3">Success Indicator</th>
+                      <th className="text-left font-medium text-gray-700 px-4 py-3">Progress Report</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {progress.map((p) => {
+                      const studentName = getUserById(p.studentId)?.name ?? p.studentId
+                      return (
+                        <tr
+                          key={p.studentId}
+                          className="border-b last:border-0 hover:bg-gray-50/50"
+                        >
+                          <td className="px-4 py-3 font-medium text-gray-900">{studentName}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{getStudentGroup(p.studentId)}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <span
+                                className={`h-2.5 w-2.5 rounded-full ${
+                                  p.status === 'red' ? 'bg-red-500' : p.status === 'yellow' ? 'bg-amber-500' : 'bg-green-500'
+                                }`}
+                              />
+                              <span className="text-muted-foreground capitalize">{p.status}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center text-muted-foreground">
+                              <BarChart3 className="h-4 w-4" aria-label="Progress report" />
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Assign to Class (compact) */}
+        {classes.length > 0 && (
+          <section className="rounded-lg border bg-white p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Assign to Class</h3>
+            {assignedClasses.length > 0 && (
+              <p className="text-xs text-muted-foreground mb-2">
+                Assigned to: {assignedClasses.map((c) => c.name).join(', ')}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Select value={selectedClassIdToAssign} onValueChange={setSelectedClassIdToAssign}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select a class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleAssignToClass} disabled={!selectedClassIdToAssign}>
+                Assign to class
+              </Button>
+            </div>
+          </section>
+        )}
       </main>
 
       <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {messageDialogType === 'message' ? 'Send message' : 'Send guidance'} to {messageDialogRecipient}
+              {messageDialogType === 'message' ? 'Send message' : 'Send guidance'} to{' '}
+              {messageDialogRecipient}
             </DialogTitle>
             <DialogDescription>
               {messageDialogType === 'message'
@@ -484,7 +467,7 @@ function ProjectDetailContent() {
               id="message-body"
               placeholder={
                 messageDialogType === 'message'
-                  ? 'e.g. Let\'s discuss your submission in office hours...'
+                  ? "e.g. Let's discuss your submission in office hours..."
                   : 'e.g. Try reviewing the rubric for criterion 2. Here are some tips...'
               }
               value={messageBody}

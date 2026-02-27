@@ -528,6 +528,10 @@ export function getEvidenceByStudent(studentId: string, projectId: string): Evid
   return store.evidence.filter(e => e.studentId === studentId && e.projectId === projectId)
 }
 
+export function getEvidenceByProject(projectId: string): Evidence[] {
+  return store.evidence.filter(e => e.projectId === projectId)
+}
+
 export function getFeedbackByEvidence(evidenceId: string): Feedback[] {
   return store.feedback.filter(f => f.evidenceId === evidenceId)
 }
@@ -578,21 +582,31 @@ function demoMilestones(daysFromNow: number[]) {
   }))
 }
 
-export function seedDemoData(): void {
-  if (store.projects.length > 0) return
+export function seedDemoData(opts?: { force?: boolean }): void {
+  if (!opts?.force && store.projects.length > 0) return
+  if (opts?.force) clearAllData()
   
   const teacherId = 't1'
-  const now = new Date().toISOString()
-  const pastDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const now = new Date()
+  const nowIso = now.toISOString()
+  const day = 24 * 60 * 60 * 1000
+  const pastDate = new Date(now.getTime() - 2 * day).toISOString().split('T')[0]
 
   // —— Projects ——
+  // p1: 4 milestones showcasing all states for student s1 — Completed, Past-due, Active, Inactive
+  const p1Milestones: Milestone[] = [
+    { id: 'm1', name: 'Initial Draft', description: 'Submit first draft with thesis', dueDate: new Date(now.getTime() - 7 * day).toISOString().split('T')[0], order: 1 },
+    { id: 'm2', name: 'Peer Review', description: 'Submit revised draft after feedback', dueDate: new Date(now.getTime() - 3 * day).toISOString().split('T')[0], order: 2 },
+    { id: 'm3', name: 'Revision', description: 'Submit polished revision', dueDate: new Date(now.getTime() + 7 * day).toISOString().split('T')[0], order: 3 },
+    { id: 'm4', name: 'Final Submission', description: 'Submit final version', dueDate: new Date(now.getTime() + 21 * day).toISOString().split('T')[0], order: 4, opensOn: '2026-04-23' },
+  ]
   const p1 = createProject({
     title: 'Persuasive Essay on Climate Change',
     description: 'Write a 5-paragraph persuasive essay arguing for or against climate change policies. Use evidence from at least 3 credible sources.',
     teacherId,
     standards: [STANDARDS_LIBRARY[0], STANDARDS_LIBRARY[2]],
     rubric: DEMO_RUBRIC,
-    milestones: demoMilestones([7, 14, 21]),
+    milestones: p1Milestones,
     taskType: 'individual',
     status: 'published'
   })
@@ -696,9 +710,8 @@ export function seedDemoData(): void {
     })
   }
 
-  // p1: Alex (s1) 2 milestones, Jordan (s2) 1, Sam (s3) 1
+  // p1: s1 has m1 only (completed); m2 past-due, m3 active, m4 inactive — showcases all checkpoint states
   addEvidenceAndFeedback('s1', p1.id, 'm1', 'Climate change requires policy action. Evidence from IPCC...', [3, 3, 3, 3])
-  addEvidenceAndFeedback('s1', p1.id, 'm2', 'Revised draft with stronger thesis and two more sources.', [4, 3, 4, 3])
   addEvidenceAndFeedback('s2', p1.id, 'm1', 'My argument is that renewable energy can replace fossil fuels...', [2, 2, 3, 2])
   addEvidenceAndFeedback('s3', p1.id, 'm1', 'First draft on climate policy.', [3, 3, 2, 3])
   // p2: s1, s2 with different scores (one low for flag)
@@ -751,7 +764,7 @@ export function seedDemoData(): void {
     reason: 'Average score of 1.5/4 is below threshold',
     severity: 'high',
     suggestedIntervention: 'Schedule one-on-one to review rubric and provide support',
-    createdAt: now,
+    createdAt: nowIso,
     resolved: false
   })
   flagsList.push({
@@ -762,7 +775,7 @@ export function seedDemoData(): void {
     reason: 'No submissions in 6 days',
     severity: 'medium',
     suggestedIntervention: 'Check in with student about barriers to progress',
-    createdAt: now,
+    createdAt: nowIso,
     resolved: false
   })
   flagsList.push({
@@ -773,7 +786,7 @@ export function seedDemoData(): void {
     reason: 'Missed milestone: Peer Review (due ' + pastDate + ')',
     severity: 'high',
     suggestedIntervention: 'Send reminder and offer extension if needed',
-    createdAt: now,
+    createdAt: nowIso,
     resolved: false
   })
 
