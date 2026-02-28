@@ -234,7 +234,7 @@ function ProjectDetailContent() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
         {/* Support Alert */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Support Alert</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Support Alert — LLM flagged</h2>
           {flags.length === 0 ? (
             <p className="text-sm text-muted-foreground">No students currently flagged for support.</p>
           ) : (
