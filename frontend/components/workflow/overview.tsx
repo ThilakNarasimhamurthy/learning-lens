@@ -29,9 +29,9 @@ export function Overview({ onNavigate }: OverviewProps) {
           AI-Powered Student Assessment
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl text-pretty leading-relaxed">
-          Walk through the complete journey: a student uploads an essay, AI analyzes it against
-          a rubric, generates targeted prompts, the student revises, and the teacher sees
-          everything on their dashboard.
+          Walk through the complete journey: a student uploads evidence for the Composting Systems
+          project, AI analyzes it against the rubric, generates targeted prompts, the student revises,
+          and the teacher sees everything on their dashboard.
         </p>
         <div className="flex gap-3 pt-2">
           <Button size="lg" onClick={() => onNavigate("student")} className="gap-2">
@@ -77,10 +77,10 @@ export function Overview({ onNavigate }: OverviewProps) {
           <div className="flex flex-col gap-1">
             <h3 className="font-semibold text-foreground">Demo Scenario</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              You are following <span className="font-medium text-foreground">Sarah Johnson</span>, a student in{" "}
-              <span className="font-medium text-foreground">US History Period 3</span>. She has submitted an essay on the{" "}
-              <span className="font-medium text-foreground">Civil Rights Movement</span>. The AI will analyze her work
-              against the course rubric, identify gaps, and generate targeted prompts to guide her revision.
+              You are following <span className="font-medium text-foreground">Alex Chen</span>, a student in{" "}
+              <span className="font-medium text-foreground">Period 1 Science</span>. They have submitted evidence for the{" "}
+              <span className="font-medium text-foreground">Composting Systems</span> project. The AI will analyze their
+              work against the rubric, identify gaps, and generate targeted prompts to guide revision.
             </p>
           </div>
         </div>
@@ -90,7 +90,7 @@ export function Overview({ onNavigate }: OverviewProps) {
             <span className="text-xs text-muted-foreground">Workflow Steps</span>
           </div>
           <div className="rounded-lg bg-muted/50 p-4 flex flex-col items-center gap-1">
-            <span className="text-2xl font-bold text-foreground">5</span>
+            <span className="text-2xl font-bold text-foreground">3</span>
             <span className="text-xs text-muted-foreground">Rubric Criteria</span>
           </div>
           <div className="rounded-lg bg-muted/50 p-4 flex flex-col items-center gap-1">
@@ -115,7 +115,7 @@ export function Overview({ onNavigate }: OverviewProps) {
           <div className="flex flex-col gap-1">
             <h3 className="font-semibold text-foreground">Student View</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Upload an essay, see AI analysis and rubric mapping, answer guiding prompts, revise
+              Upload evidence, see AI analysis and rubric mapping, answer guiding prompts, revise
               your work, and receive an evaluation with scores and feedback.
             </p>
           </div>

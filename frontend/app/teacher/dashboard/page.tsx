@@ -38,6 +38,13 @@ function DashboardContent() {
   const [user, setUser] = useState<any>(null)
   const [projects, setProjects] = useState<any[]>([])
   const [lastSynced, setLastSynced] = useState<Date>(new Date())
+  const [, setTick] = useState(0)
+
+  // Re-render periodically so "Last Updated" (e.g. "2 min ago") updates over time
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30000)
+    return () => clearInterval(id)
+  }, [])
 
   // Real-time updates when a student submits in another tab (storage event)
   useEffect(() => {
@@ -77,6 +84,7 @@ function DashboardContent() {
 
   function formatTimeAgo(ms: number) {
     const mins = Math.floor((Date.now() - ms) / 60000)
+    if (mins < 1) return 'Just now'
     if (mins < 60) return `${mins} min ago`
     const hours = Math.floor(mins / 60)
     if (hours < 24) return `${hours}h ago`
@@ -207,26 +215,36 @@ function DashboardContent() {
                   <ul className="divide-y divide-gray-100">
                     {projects.slice(0, 5).map((project) => (
                       <li key={project.id}>
-                        <button
-                          onClick={() => router.push(`/teacher/projects/${project.id}`)}
-                          className="w-full flex items-center justify-between gap-4 px-4 py-3 text-left hover:bg-gray-50/80 transition-colors"
-                        >
-                          <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50/80 transition-colors">
+                          <button
+                            onClick={() => router.push(`/teacher/projects/${project.id}`)}
+                            className="flex-1 min-w-0 text-left"
+                          >
                             <p className="font-medium text-gray-900 truncate">{project.title}</p>
                             <p className="text-xs text-gray-500 mt-0.5">
                               {project.milestones.length} milestones · {project.standards?.length ?? 0} standards
                             </p>
+                          </button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded ${
+                                project.status === 'published'
+                                  ? 'bg-gray-100 text-gray-700'
+                                  : 'bg-amber-50 text-amber-700'
+                              }`}
+                            >
+                              {project.status}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-gray-200 text-gray-600"
+                              onClick={() => router.push(`/teacher/projects/${project.id}`)}
+                            >
+                              View
+                            </Button>
                           </div>
-                          <span
-                            className={`shrink-0 text-xs font-medium px-2 py-1 rounded ${
-                              project.status === 'published'
-                                ? 'bg-gray-100 text-gray-700'
-                                : 'bg-amber-50 text-amber-700'
-                            }`}
-                          >
-                            {project.status}
-                          </span>
-                        </button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -286,7 +304,11 @@ function DashboardContent() {
                               variant="outline"
                               size="sm"
                               className="shrink-0 border-gray-200 text-gray-600 self-start sm:self-center"
-                              onClick={() => router.push(`/teacher/projects/${flag.projectId}`)}
+                              onClick={() =>
+                                router.push(
+                                  `/teacher/projects/${flag.projectId}/students/${flag.studentId}`
+                                )
+                              }
                             >
                               View
                             </Button>

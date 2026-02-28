@@ -147,8 +147,8 @@ export function StudentWorkflow({ onComplete }: StudentWorkflowProps) {
             <div className="rounded-xl border bg-card p-6 flex flex-col gap-5">
               <h2 className="text-lg font-semibold text-foreground">Upload Evidence</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Submit your essay for AI-powered analysis. The system will extract text,
-                identify key concepts, and map your work against the assignment rubric.
+                Submit your evidence for AI-powered analysis. The system will extract text,
+                identify key concepts, and map your work against the Composting Systems rubric.
               </p>
 
               {!uploaded ? (
@@ -182,7 +182,7 @@ export function StudentWorkflow({ onComplete }: StudentWorkflowProps) {
                       </div>
                       <Button onClick={handleUpload} className="gap-2">
                         <Upload className="h-4 w-4" />
-                        Upload Sarah_Johnson_Essay.pdf
+                        Upload Composting_Evidence.pdf
                       </Button>
                     </>
                   )}
@@ -193,7 +193,7 @@ export function StudentWorkflow({ onComplete }: StudentWorkflowProps) {
                     <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground">
-                        Sarah_Johnson_Essay_Civil_Rights.pdf
+                        Composting_Evidence.pdf
                       </p>
                       <p className="text-xs text-muted-foreground">
                         4 paragraphs extracted &middot; 287 words
@@ -245,7 +245,7 @@ export function StudentWorkflow({ onComplete }: StudentWorkflowProps) {
                     <Sparkles className="h-5 w-5 text-primary absolute -top-1 -right-1 animate-pulse" />
                   </div>
                   <p className="text-sm font-medium text-foreground">
-                    Analyzing essay content...
+                    Analyzing evidence...
                   </p>
                   <div className="flex gap-2 text-xs text-muted-foreground">
                     <span>Extracting concepts</span>
@@ -353,7 +353,7 @@ export function StudentWorkflow({ onComplete }: StudentWorkflowProps) {
                 <div>
                   <h2 className="text-lg font-semibold text-foreground">Rubric Mapping</h2>
                   <p className="text-sm text-muted-foreground">
-                    Your essay mapped against each rubric criterion
+                    Your evidence mapped against each rubric criterion
                   </p>
                 </div>
               </div>

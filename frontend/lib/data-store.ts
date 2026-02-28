@@ -169,6 +169,14 @@ export function getProject(id: string): Project | undefined {
   return store.projects.find(p => p.id === id)
 }
 
+/** Get rubric for a milestone (per-week) or fall back to project rubric */
+export function getRubricForMilestone(project: Project | null | undefined, milestoneId: string | null | undefined): RubricCriterion[] {
+  if (!project) return []
+  if (!milestoneId) return project.rubric
+  const m = project.milestones.find((x) => x.id === milestoneId)
+  return m?.rubric ?? project.rubric
+}
+
 export function updateProject(id: string, updates: Partial<Project>): Project | undefined {
   const projects = store.projects
   const index = projects.findIndex(p => p.id === id)
@@ -241,12 +249,12 @@ export function submitEvidence(evidence: Omit<Evidence, 'id' | 'submittedAt' | '
   return newEvidence
 }
 
-// Map project rubric criterion to demo rubric row (by name or index)
+// Map project rubric criterion to demo rubric row (Composting Systems — Climate Resilience, Troubleshooting Logic, Engineering Refinement)
 function getDemoRowForCriterion(criterion: { name: string }, index: number): RubricRow {
-  const name = criterion.name.toLowerCase()
-  if (name.includes('writing') || name.includes('mechanics')) {
-    return rubricMapping[4] // Writing Mechanics
-  }
+  const matched = rubricMapping.find((r) =>
+    criterion.name.toLowerCase().includes(r.criterion.toLowerCase().split(' ')[0])
+  )
+  if (matched) return matched
   return rubricMapping[Math.min(index, rubricMapping.length - 1)]
 }
 
@@ -258,11 +266,13 @@ function runAIAnalysisPipeline(evidence: Evidence) {
   // Module 1: Evidence Extraction — use demo extraction (key claims, concepts, structure)
   const extractedData = extractEvidence(evidence.extractedText || evidence.content)
   
-  // Module 2 & 3: Rubric Mapping & Gap Detection — use demo rubric rows
+  // Module 2 & 3: Rubric Mapping & Gap Detection — use milestone rubric when available
   const analyses = store.aiAnalysis
   const feedbacks = store.feedback
-  
-  project.rubric.forEach((criterion, index) => {
+  const milestone = project.milestones.find((m) => m.id === evidence.milestoneId)
+  const rubric = milestone?.rubric ?? project.rubric
+
+  rubric.forEach((criterion, index) => {
     const demoRow = getDemoRowForCriterion(criterion, index)
     const score = demoRow.score
     const maxScore = demoRow.maxScore
@@ -298,7 +308,7 @@ function runAIAnalysisPipeline(evidence: Evidence) {
       score,
       strengths: strengths.length > 0 ? strengths : generateStrengths(score, criterion.name),
       gaps: gaps.length > 0 ? gaps : generateGaps(score, criterion.name),
-      missingStandards: score < 3 ? ['Consider addressing counterarguments', 'Add more specific evidence'] : [],
+      missingStandards: score < 3 ? ['Add more specific evidence', 'Consider including a diagram or examples'] : [],
       nextSteps: demoRow.gap
         ? `Focus on: ${demoRow.gap} Use the reflection prompt below to plan your revision.`
         : generateNextSteps(score, criterion.name),
@@ -565,11 +575,47 @@ export function clearAllData(): void {
   })
 }
 
-const DEMO_RUBRIC = [
-  { id: 'c1', name: 'Thesis & Argument', description: 'Clear thesis with supporting arguments', weight: 30, maxScore: 4, levels: [{ score: 4, label: 'Excellent', description: 'Strong thesis' }, { score: 3, label: 'Proficient', description: 'Clear thesis' }, { score: 2, label: 'Developing', description: 'Needs development' }, { score: 1, label: 'Beginning', description: 'Unclear thesis' }] },
-  { id: 'c2', name: 'Evidence & Citations', description: 'Credible sources and citations', weight: 30, maxScore: 4, levels: [{ score: 4, label: 'Excellent', description: 'Multiple sources' }, { score: 3, label: 'Proficient', description: 'Adequate sources' }, { score: 2, label: 'Developing', description: 'Limited sources' }, { score: 1, label: 'Beginning', description: 'Missing sources' }] },
-  { id: 'c3', name: 'Organization & Structure', description: 'Clear organization', weight: 20, maxScore: 4, levels: [{ score: 4, label: 'Excellent', description: 'Excellent flow' }, { score: 3, label: 'Proficient', description: 'Clear' }, { score: 2, label: 'Developing', description: 'Some issues' }, { score: 1, label: 'Beginning', description: 'Lacks organization' }] },
-  { id: 'c4', name: 'Writing Mechanics', description: 'Grammar and punctuation', weight: 20, maxScore: 4, levels: [{ score: 4, label: 'Excellent', description: 'Few errors' }, { score: 3, label: 'Proficient', description: 'Minor errors' }, { score: 2, label: 'Developing', description: 'Several errors' }, { score: 1, label: 'Beginning', description: 'Frequent errors' }] },
+// Unified rubric for all Composting Systems tasks (Climate Resilience, Troubleshooting Logic, Engineering Refinement)
+const UNIFIED_COMPOSTING_RUBRIC: RubricCriterion[] = [
+  {
+    id: 'c1',
+    name: 'Climate Resilience',
+    description: 'Ability to withstand or adapt to climatic conditions',
+    weight: 34,
+    maxScore: 4,
+    levels: [
+      { score: 4, label: 'Exceeds Standards', description: 'Proposes a highly detailed winter plan with scientific reasoning (e.g., "Increasing pile mass to retain metabolic heat").' },
+      { score: 3, label: 'Meets Standards', description: 'Identifies that cold is a problem and suggests basic insulation (e.g., "Put a tarp on it").' },
+      { score: 2, label: 'Approaching Standards', description: 'Mentions weather but doesn\'t offer a specific scientific solution for the microbes.' },
+      { score: 1, label: 'Below Standards', description: 'Ignores the impact of climate/temperature on the system.' },
+    ],
+  },
+  {
+    id: 'c2',
+    name: 'Troubleshooting Logic',
+    description: 'Approach to identifying and solving problems',
+    weight: 33,
+    maxScore: 4,
+    levels: [
+      { score: 4, label: 'Exceeds Standards', description: 'Clearly distinguishes between different types of pile failure (Too Wet vs. Too Dry vs. Anaerobic) with distinct fixes for each.' },
+      { score: 3, label: 'Meets Standards', description: 'Identifies the signs of an anaerobic pile (odor) and suggests adding "Browns" or turning the pile.' },
+      { score: 2, label: 'Approaching Standards', description: 'Mentions that the pile might smell but doesn\'t explain the chemical fix.' },
+      { score: 1, label: 'Below Standards', description: 'Cannot identify how to fix a failing compost pile.' },
+    ],
+  },
+  {
+    id: 'c3',
+    name: 'Engineering Refinement',
+    description: 'Ability to improve or optimize design based on research or experience',
+    weight: 33,
+    maxScore: 4,
+    levels: [
+      { score: 4, label: 'Exceeds Standards', description: 'Modifies the original Week 2 design based on research (e.g., "We added a lid and a drainage layer after researching rain impact").' },
+      { score: 3, label: 'Meets Standards', description: 'Makes minor adjustments to the plan to ensure it is more durable or efficient.' },
+      { score: 2, label: 'Approaching Standards', description: 'Describes the original plan again without adding any new safeguards or refinements.' },
+      { score: 1, label: 'Below Standards', description: 'Does not change or improve the plan based on new research.' },
+    ],
+  },
 ]
 
 function demoMilestones(daysFromNow: number[]) {
@@ -592,103 +638,31 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   const day = 24 * 60 * 60 * 1000
   const pastDate = new Date(now.getTime() - 2 * day).toISOString().split('T')[0]
 
-  // —— Projects ——
-  // p1: 4 milestones showcasing all states for student s1 — Completed, Past-due, Active, Inactive
-  const p1Milestones: Milestone[] = [
-    { id: 'm1', name: 'Initial Draft', description: 'Submit first draft with thesis', dueDate: new Date(now.getTime() - 7 * day).toISOString().split('T')[0], order: 1 },
-    { id: 'm2', name: 'Peer Review', description: 'Submit revised draft after feedback', dueDate: new Date(now.getTime() - 3 * day).toISOString().split('T')[0], order: 2 },
-    { id: 'm3', name: 'Revision', description: 'Submit polished revision', dueDate: new Date(now.getTime() + 7 * day).toISOString().split('T')[0], order: 3 },
-    { id: 'm4', name: 'Final Submission', description: 'Submit final version', dueDate: new Date(now.getTime() + 21 * day).toISOString().split('T')[0], order: 4, opensOn: '2026-04-23' },
+  // —— Single Project: Composting Systems (4-week timeline from project plan) ——
+  const compostingMilestones: Milestone[] = [
+    // Week 1: How / Why Composting Matters (Ecological Science)
+    { id: 'm1', name: 'How / Why Composting Matters (Ecological Science)', objectives: '• Identify research questions related to composting and the carbon cycle.\n• Understand aerobic vs. anaerobic composting processes.\n• Learn about the carbon cycle and its environmental impact.\n• Understand the role of microbes in decomposition.', description: 'Upload Pre-assessment: Find resources on aerobic bacteria (breaking down organic matter for humus), anaerobic bacteria (operating in landfills, producing methane), and decomposing organisms.\n\nComplete assessment: Create a Flow of Matter diagram including: inputs, source (food waste degradation), process (cellular respiration/CO2 release), product (humus), and where methane (CH4) comes from. Include measuring CO2.', rubric: UNIFIED_COMPOSTING_RUBRIC, dueDate: new Date(now.getTime() - 7 * day).toISOString().split('T')[0], order: 1 },
+    // Week 2: How / Engineering (Composting Systems)
+    { id: 'm2', name: 'How / Engineering (Composting Systems)', objectives: '• Develop a detailed system design for a compost reactor.\n• Identify system components and specifications.\n• Determine optimal Carbon-to-Nitrogen (C:N) ratios.\n• Evaluate costs and labor requirements.', description: 'Upload Pre-assessment: Find resources on C:N balance (e.g., 30:1 ratio), bioreactor design, and system specifications for three-bin systems, compost tea brewers, or vermicomposting.\n\nComplete assessment: Create a Decision Matrix or Comparative Table on the Three-Bin System comparing: Optimal C:N ratio, Process Speed, Odor Management, Labor, Cost, and aesthetics.', rubric: UNIFIED_COMPOSTING_RUBRIC, dueDate: new Date(now.getTime() - 3 * day).toISOString().split('T')[0], order: 2 },
+    // Week 3: How / Proof-of-Concept & Implementation
+    { id: 'm3', name: 'How / Proof-of-Concept & Implementation', objectives: '• Troubleshoot common composting issues (odors, pests, moisture).\n• Understand finished compost uses and benefits.\n• Identify potential problems with your Week 2 design.\n• Propose modifications for year-round functionality.', description: 'Upload Pre-assessment: Find resources on water/composting strategies, odor control, and moisture control (cold climates, insulation, pile size, turning).\n\nComplete assessment: Identify potential problems with the Week 2 design and propose up to 3 modifications for year-round functionality. Address bioreactor troubleshooting, odors, pests, and temperature monitoring.', rubric: UNIFIED_COMPOSTING_RUBRIC, dueDate: new Date(now.getTime() + 7 * day).toISOString().split('T')[0], order: 3 },
+    // Week 4: How / Sustaining & Standardizing (Policy)
+    { id: 'm4', name: "How / Sustaining & Standardizing 'The Future' (Policy)", objectives: '• Present research findings to stakeholders.\n• Develop recommendations for a sustainable composting program.\n• Understand policy, regulation, and carbon credits.\n• Plan for scalable, long-term composting.', description: 'Upload Pre-assessment: Find resources comparing methane vs. carbon dioxide (GWP), and a case study of a successful composting program identifying a "Key to Success."\n\nComplete assessment: Create a final presentation or written report for the School Board/Principal — scientifically sound, logistically possible, and environmentally necessary. Address scalable composting, carbon credits, and policy.', rubric: UNIFIED_COMPOSTING_RUBRIC, dueDate: new Date(now.getTime() + 21 * day).toISOString().split('T')[0], order: 4, opensOn: new Date(now.getTime() + 14 * day).toISOString().split('T')[0] },
   ]
-  const p1 = createProject({
-    title: 'Persuasive Essay on Climate Change',
-    description: 'Write a 5-paragraph persuasive essay arguing for or against climate change policies. Use evidence from at least 3 credible sources.',
-    teacherId,
-    standards: [STANDARDS_LIBRARY[0], STANDARDS_LIBRARY[2]],
-    rubric: DEMO_RUBRIC,
-    milestones: p1Milestones,
-    taskType: 'individual',
-    status: 'published'
-  })
-  const p2 = createProject({
-    title: 'Research Paper: Civil Rights Movement',
-    description: 'Research and write a 4–6 page paper on a key figure or event of the Civil Rights Movement. Include primary and secondary sources.',
-    teacherId,
-    standards: [STANDARDS_LIBRARY[1], STANDARDS_LIBRARY[2]],
-    rubric: DEMO_RUBRIC,
-    milestones: demoMilestones([10, 20, 28]),
-    taskType: 'individual',
-    status: 'published'
-  })
-  const p3 = createProject({
-    title: 'Science Lab: Chemical Reactions',
-    description: 'Design and document a simple chemical reaction experiment. Hypothesis, method, data, and conclusion required.',
+  const project = createProject({
+    title: 'Composting Systems',
+    description: 'A 4-week project on composting: microbiology (aerobic/anaerobic), system design (C:N ratio, three-bin/vermicomposting), moisture control and troubleshooting, and final presentation on GWP and sustainable composting.',
     teacherId,
     standards: [STANDARDS_LIBRARY[4], STANDARDS_LIBRARY[5]],
-    rubric: DEMO_RUBRIC,
-    milestones: demoMilestones([5, 12, 19]),
-    taskType: 'individual',
-    status: 'published'
-  })
-  const p4 = createProject({
-    title: 'Creative Writing Portfolio',
-    description: 'Submit three short pieces: narrative, descriptive, and reflective. Revise based on feedback.',
-    teacherId,
-    standards: [STANDARDS_LIBRARY[0], STANDARDS_LIBRARY[3]],
-    rubric: DEMO_RUBRIC,
-    milestones: demoMilestones([7, 14]),
+    rubric: UNIFIED_COMPOSTING_RUBRIC,
+    milestones: compostingMilestones,
     taskType: 'individual',
     status: 'published'
   })
 
-  // p5: Community Impact Documentary — PBL with all task states (Completed, Past-due, Active, Inactive)
-  const p5Milestones: Milestone[] = [
-    { id: 'm1', name: 'Research & Proposal', description: 'Submit research on local issue and documentary proposal', dueDate: new Date(now.getTime() - 7 * day).toISOString().split('T')[0], order: 1 },
-    { id: 'm2', name: 'Script & Storyboard', description: 'Submit script and storyboard for documentary', dueDate: new Date(now.getTime() - 3 * day).toISOString().split('T')[0], order: 2 },
-    { id: 'm3', name: 'Rough Cut', description: 'Submit rough cut of documentary (5–8 min)', dueDate: new Date(now.getTime() + 7 * day).toISOString().split('T')[0], order: 3 },
-    { id: 'm4', name: 'Final Cut & Reflection', description: 'Submit final documentary and written reflection', dueDate: new Date(now.getTime() + 21 * day).toISOString().split('T')[0], order: 4, opensOn: '2026-05-01' },
-  ]
-  const p5 = createProject({
-    title: 'Community Impact Documentary',
-    description: 'Create a 5–8 minute documentary exploring a local community issue. Include research, script, rough cut, and final cut with reflection on impact.',
-    teacherId,
-    standards: [STANDARDS_LIBRARY[1], STANDARDS_LIBRARY[2]],
-    rubric: DEMO_RUBRIC,
-    milestones: p5Milestones,
-    taskType: 'individual',
-    status: 'published'
-  })
-
-  // p6: Sustainable Design Challenge — PBL with all task states
-  const p6Milestones: Milestone[] = [
-    { id: 'm1', name: 'Problem Definition & Research', description: 'Submit problem statement and background research', dueDate: new Date(now.getTime() - 5 * day).toISOString().split('T')[0], order: 1 },
-    { id: 'm2', name: 'Prototype Design', description: 'Submit design sketches and material list', dueDate: new Date(now.getTime() - 2 * day).toISOString().split('T')[0], order: 2 },
-    { id: 'm3', name: 'Build & Test', description: 'Submit prototype build log and testing results', dueDate: new Date(now.getTime() + 10 * day).toISOString().split('T')[0], order: 3 },
-    { id: 'm4', name: 'Final Presentation', description: 'Submit presentation and improvement plan', dueDate: new Date(now.getTime() + 24 * day).toISOString().split('T')[0], order: 4, opensOn: '2026-05-15' },
-  ]
-  const p6 = createProject({
-    title: 'Sustainable Design Challenge',
-    description: 'Design a sustainable solution for a school or community problem. Complete problem research, prototype design, build and test, then present your solution.',
-    teacherId,
-    standards: [STANDARDS_LIBRARY[4], STANDARDS_LIBRARY[5]],
-    rubric: DEMO_RUBRIC,
-    milestones: p6Milestones,
-    taskType: 'individual',
-    status: 'published'
-  })
-
-  // —— Classes ——
-  const c1 = createClass({ name: 'Period 1 English', teacherId, studentIds: ['s1', 's2', 's3'], projectIds: [] })
-  const c2 = createClass({ name: 'Period 3 English', teacherId, studentIds: ['s1', 's2', 's4'], projectIds: [] })
-  const c3 = createClass({ name: 'Science 101', teacherId, studentIds: ['s2', 's3', 's4'], projectIds: [] })
-
-  assignProjectToClass(c1.id, p1.id)
-  assignProjectToClass(c1.id, p2.id)
-  assignProjectToClass(c1.id, p5.id)
-  assignProjectToClass(c2.id, p1.id)
-  assignProjectToClass(c2.id, p4.id)
-  assignProjectToClass(c2.id, p6.id)
-  assignProjectToClass(c3.id, p3.id)
+  // —— Classes —— (one class, all students in Composting Systems)
+  const c1 = createClass({ name: 'Period 1 Science', teacherId, studentIds: ['s1', 's2', 's3', 's4'], projectIds: [] })
+  assignProjectToClass(c1.id, project.id)
 
   // —— Evidence, Feedback, Progress, Flags (dummy entries for full dashboard) ——
   const evidences: Evidence[] = []
@@ -719,7 +693,9 @@ export function seedDemoData(opts?: { force?: boolean }): void {
       submittedAt,
       version: 1
     })
-    proj.rubric.forEach((crit, i) => {
+    const milestone = proj.milestones.find((m) => m.id === milestoneId)
+    const rubric = milestone?.rubric ?? proj.rubric
+    rubric.forEach((crit, i) => {
       const score = scores[i] ?? 3
       feedbacks.push({
         id: `fb-${evId}-${crit.id}`,
@@ -748,24 +724,17 @@ export function seedDemoData(opts?: { force?: boolean }): void {
     })
   }
 
-  // p1: s1 has m1 only (completed); m2 past-due, m3 active, m4 inactive — showcases all task states
-  addEvidenceAndFeedback('s1', p1.id, 'm1', 'Climate change requires policy action. Evidence from IPCC...', [3, 3, 3, 3])
-  addEvidenceAndFeedback('s2', p1.id, 'm1', 'My argument is that renewable energy can replace fossil fuels...', [2, 2, 3, 2])
-  addEvidenceAndFeedback('s3', p1.id, 'm1', 'First draft on climate policy.', [3, 3, 2, 3])
-  // p2: s1, s2 with different scores (one low for flag)
-  addEvidenceAndFeedback('s1', p2.id, 'm1', 'Research on Martin Luther King Jr. and nonviolent resistance.', [4, 4, 3, 4])
-  addEvidenceAndFeedback('s2', p2.id, 'm1', 'Short draft.', [1, 2, 2, 1])
-  addEvidenceAndFeedback('s3', p2.id, 'm1', 'Civil rights paper draft.', [3, 3, 3, 3])
-  // p3: s2, s3, s4
-  addEvidenceAndFeedback('s2', p3.id, 'm1', 'Hypothesis: vinegar and baking soda will produce CO2.', [3, 3, 3, 3])
-  addEvidenceAndFeedback('s3', p3.id, 'm1', 'Lab report draft.', [4, 3, 4, 4])
-  addEvidenceAndFeedback('s4', p3.id, 'm1', 'Experiment documentation.', [3, 3, 3, 3])
-  // p5: Community Impact Documentary — s1 has m1 (Task 1) completed; m2 past-due, m3 active, m4 inactive
-  addEvidenceAndFeedback('s1', p5.id, 'm1', 'Research on food insecurity in our community. Documentary will focus on local food bank.', [3, 3, 3, 3])
-  addEvidenceAndFeedback('s2', p5.id, 'm1', 'Proposal: Documentary on youth mental health and school support.', [4, 3, 4, 3])
-  // p6: Sustainable Design Challenge — s2 has m1 (Task 1) completed; m2 past-due, m3 active, m4 inactive
-  addEvidenceAndFeedback('s2', p6.id, 'm1', 'Problem: Cafeteria food waste. Research on composting and student behavior.', [3, 4, 3, 3])
-  addEvidenceAndFeedback('s4', p6.id, 'm1', 'Design challenge: Solar-powered phone charging station for common areas.', [3, 3, 2, 3])
+  // Composting Systems — evidence across 4 tasks to showcase all states
+  // s1: m1 completed, m2 completed — good progress
+  addEvidenceAndFeedback('s1', project.id, 'm1', 'Aerobic bacteria need oxygen (O2) to break down organic matter into humus. Anaerobic bacteria in landfills produce methane (CH4) when air is lacking. Flow of Matter: food waste → cellular respiration/CO2 → humus.', [4, 3, 3])
+  addEvidenceAndFeedback('s1', project.id, 'm2', '30:1 Carbon-to-Nitrogen ratio. Greens (nitrogen): food scraps. Browns (carbon): leaves, paper. Comparative table: three-bin vs vermicomposting for capacity, speed, labor.', [4, 4, 3])
+  // s2: m1 completed, low score — flagged
+  addEvidenceAndFeedback('s2', project.id, 'm1', 'Found some info on composting. Bacteria and stuff.', [1, 2, 1])
+  // s3: m1 and m2 completed — solid
+  addEvidenceAndFeedback('s3', project.id, 'm1', 'Composting 101: Aerobic decomposition uses O2; anaerobic in landfills produces CH4. Flow diagram: inputs → process → humus.', [3, 3, 3])
+  addEvidenceAndFeedback('s3', project.id, 'm2', 'C:N ratio 30:1. The Compost Handbook. Dossier: three-bin vs compost tea—capacity, odor, pests.', [3, 3, 3])
+  // s4: m1 only — past-due on m2, active m3
+  addEvidenceAndFeedback('s4', project.id, 'm1', 'Aerobic organisms need Oxygen. Anaerobic in landfill context produce methane. Decomposition data and microbe types.', [3, 3, 3])
 
   const key = (s: string, p: string) => `${s}-${p}`
   const progressByKey = new Map<string, StudentProgress>()
@@ -799,11 +768,11 @@ export function seedDemoData(opts?: { force?: boolean }): void {
     p.flagReason = p.status === 'red' ? 'Low performance score (< 60%)' : p.status === 'yellow' ? 'Needs improvement (60–75%)' : undefined
   })
 
-  // Flags: low score, no activity, missed milestone (for full dashboard)
+  // Flags: low score, missed milestone (for support alert)
   flagsList.push({
     id: 'flag-1',
     studentId: 's2',
-    projectId: p2.id,
+    projectId: project.id,
     flagType: 'low_score',
     reason: 'Average score of 1.5/4 is below threshold',
     severity: 'high',
@@ -814,20 +783,9 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   flagsList.push({
     id: 'flag-2',
     studentId: 's4',
-    projectId: p3.id,
-    flagType: 'no_activity',
-    reason: 'No submissions in 6 days',
-    severity: 'medium',
-    suggestedIntervention: 'Check in with student about barriers to progress',
-    createdAt: nowIso,
-    resolved: false
-  })
-  flagsList.push({
-    id: 'flag-3',
-    studentId: 's2',
-    projectId: p1.id,
+    projectId: project.id,
     flagType: 'missed_milestone',
-    reason: 'Missed milestone: Peer Review (due ' + pastDate + ')',
+    reason: 'Missed milestone: Engineering Education / Design Thinking (due ' + pastDate + ')',
     severity: 'high',
     suggestedIntervention: 'Send reminder and offer extension if needed',
     createdAt: nowIso,
@@ -840,7 +798,7 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   store.progress = progressList
   store.flags = flagsList
 
-  console.log('Demo data seeded: 6 projects, 3 classes, evidence & progress & flags')
+  console.log('Demo data seeded: 1 project (Composting Systems), 1 class, evidence & progress & flags')
 }
 
 // Helper to find class by join code

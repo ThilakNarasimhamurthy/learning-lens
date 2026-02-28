@@ -22,6 +22,10 @@ export interface Milestone {
   id: string
   name: string
   description: string
+  /** Learning objectives for this task (extracted from project timeline) */
+  objectives?: string
+  /** Per-week rubric for this task; falls back to project.rubric when absent */
+  rubric?: RubricCriterion[]
   dueDate: string
   order: number
   reminderSent?: boolean

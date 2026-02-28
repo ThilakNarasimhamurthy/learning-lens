@@ -9,7 +9,7 @@ const _spaceMono = Space_Mono({ weight: ['400', '700'], subsets: ['latin'], vari
 
 export const metadata: Metadata = {
   title: 'Learning Lens',
-  description: 'End-to-end AI-powered student assessment platform demo. Student uploads essay, AI analyzes against rubric, generates prompts, student revises, teacher reviews.',
+  description: 'End-to-end AI-powered student assessment platform demo. Composting Systems project. Student uploads evidence, AI analyzes against rubric, generates prompts, student revises, teacher reviews.',
 }
 
 export default function RootLayout({

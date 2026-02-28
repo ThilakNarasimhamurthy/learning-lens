@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AuthGuard } from '@/components/auth-guard'
 import { getCurrentUser } from '@/lib/auth'
-import { getProject, submitEvidence, getEvidenceByStudent, getFeedbackByEvidence, getStudentProgress, getClassesByStudent } from '@/lib/data-store'
+import { getProject, submitEvidence, getEvidenceByStudent, getFeedbackByEvidence, getStudentProgress, getClassesByStudent, getRubricForMilestone } from '@/lib/data-store'
 import { dedupeById } from '@/lib/utils'
 import type { Project, Evidence, Feedback } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -15,57 +15,22 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft, Upload, CheckCircle, Clock, FileText, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Link2, ClipboardList, RefreshCw, Plus, Rocket, Trophy, AlertCircle } from 'lucide-react'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { AIProcessSteps } from '@/components/ai-indicator'
 
 const assessmentQuestions = [
-  { id: 'q1', question: 'What is the main purpose of the evidence you uploaded?', options: ['To support my claim with credible sources', 'To show I understand the topic', 'To meet the assignment requirement', 'Other'] },
-  { id: 'q2', question: 'How well does your evidence address the rubric criteria?', options: ['Strongly addresses all criteria', 'Addresses most criteria', 'Partially addresses criteria', 'Not sure yet'] },
-  { id: 'q3', question: 'What would you do to strengthen your submission?', options: ['Add more sources', 'Revise my reasoning', 'Improve organization', 'I am satisfied with my submission'] },
+  { id: 'q1', question: 'What is the main purpose of the evidence you uploaded?', placeholder: 'Describe how your evidence supports your learning...' },
+  { id: 'q2', question: 'How well does your evidence address the rubric criteria?', placeholder: 'Explain how your submission addresses the criteria...' },
+  { id: 'q3', question: 'What would you do to strengthen your submission?', placeholder: 'Reflect on areas for improvement...' },
 ]
 
-const rubricCategories = [
-  {
-    title: 'Argument Development',
-    subtitle: 'Quality of claim, counterclaims, and reasoning',
-    levels: [
-      'Clear, compelling claim with sophisticated counterclaims and well-developed reasoning throughout',
-      'Clear claim with relevant counterclaims and adequate reasoning',
-      'Claim present but counterclaims or reasoning may be weak or unclear',
-      'Unclear or missing claim, insufficient counterclaims and reasoning',
-    ],
-  },
-  {
-    title: 'Evidence & Support',
-    subtitle: 'Use of credible sources and textual evidence',
-    levels: [
-      'Multiple credible sources integrated seamlessly with strong, relevant evidence',
-      'Adequate credible sources with relevant evidence to support claims',
-      'Limited sources or evidence; relevance may be unclear',
-      'Insufficient or non-credible sources; little to no evidence',
-    ],
-  },
-  {
-    title: 'Organization & Structure',
-    subtitle: 'Logical flow and essay structure',
-    levels: [
-      'Sophisticated organization with smooth transitions and clear progression of ideas',
-      'Clear organization with logical flow and adequate transitions',
-      'Basic organization present but may lack clear transitions or logical flow',
-      'Weak or confusing organization with little logical progression',
-    ],
-  },
-  {
-    title: 'Language & Conventions',
-    subtitle: 'Grammar, vocabulary, and writing mechanics',
-    levels: [
-      'Sophisticated vocabulary with virtually no errors in grammar, spelling, or punctuation',
-      'Appropriate vocabulary with few errors that do not impede understanding',
-      'Basic vocabulary with several errors that may affect clarity',
-      'Limited vocabulary with frequent errors that impede understanding',
-    ],
-  },
-]
+/** Convert RubricCriterion[] to display format (title, subtitle, levels) */
+function rubricToDisplayFormat(criteria: import('@/lib/types').RubricCriterion[]) {
+  return criteria.map((c) => ({
+    title: c.name,
+    subtitle: c.description,
+    levels: [...c.levels].sort((a, b) => b.score - a.score).map((l) => l.description),
+  }))
+}
 
 function StudentProjectContent() {
   const router = useRouter()
@@ -232,6 +197,8 @@ function StudentProjectContent() {
 
   if (!project) return <div>Loading...</div>
 
+  const effectiveMilestoneId = selectedMilestone || viewedMilestoneId || project.milestones[0]?.id
+  const rubricCategories = rubricToDisplayFormat(getRubricForMilestone(project, effectiveMilestoneId))
   const progress = user ? getStudentProgress(user.id, project.id) : null
   const completedMilestones = progress?.completedMilestones || []
   const classNamesForProject = user
@@ -371,12 +338,18 @@ function StudentProjectContent() {
                                 {(hasEvidenceForCheckpoint || isNotOpenYet) ? (
                                   <>
                                     <div>
-                                      <p className="text-xs font-bold text-foreground mb-1">Objective</p>
+                                      <p className="text-xs font-bold text-foreground mb-1">Topic</p>
                                       <p className="text-sm font-normal text-foreground">{m.name}</p>
                                     </div>
+                                    {m.objectives && (
+                                      <div>
+                                        <p className="text-xs font-bold text-foreground mb-1">Objectives</p>
+                                        <p className="text-sm font-normal text-foreground whitespace-pre-line">{m.objectives}</p>
+                                      </div>
+                                    )}
                                     <div>
-                                      <p className="text-xs font-bold text-foreground mb-1">Task Overview</p>
-                                      <p className="text-sm font-normal text-foreground">{m.description}</p>
+                                      <p className="text-xs font-bold text-foreground mb-1">Tasks</p>
+                                      <p className="text-sm font-normal text-foreground whitespace-pre-line">{m.description}</p>
                                     </div>
                                     {!isNotOpenYet && (
                                       <div>
@@ -390,21 +363,23 @@ function StudentProjectContent() {
                                 ) : (
                                   <>
                                     <div>
-                                      <p className="text-xs font-bold text-foreground mb-1">Overview</p>
+                                      <p className="text-xs font-bold text-foreground mb-1">Topic</p>
                                       <p className="text-sm font-normal text-foreground">{m.name}</p>
                                     </div>
+                                    {m.objectives && (
+                                      <div>
+                                        <p className="text-xs font-bold text-foreground mb-1">Objectives</p>
+                                        <p className="text-sm font-normal text-foreground whitespace-pre-line">{m.objectives}</p>
+                                      </div>
+                                    )}
                                     <div>
-                                      <p className="text-xs font-bold text-foreground mb-1">Curriculum</p>
-                                      <p className="text-sm font-normal text-foreground">{project?.title || 'Project'}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-bold text-foreground mb-1">Goals</p>
-                                      <p className="text-sm font-normal text-foreground">{m.description}</p>
+                                      <p className="text-xs font-bold text-foreground mb-1">Tasks</p>
+                                      <p className="text-sm font-normal text-foreground whitespace-pre-line">{m.description}</p>
                                     </div>
                                     <div>
                                       <p className="text-xs font-bold text-foreground mb-1">Required Evidence</p>
                                       <p className="text-sm font-normal text-foreground">
-                                        Upload 2-3 pieces of evidence to show your learning progression.
+                                        Upload resources and complete the assessment to show your learning progression.
                                       </p>
                                     </div>
                                   </>
@@ -504,10 +479,16 @@ function StudentProjectContent() {
                                           const latestId = sortedByDate[0]?.id
                                           return forCheckpoint.map((ev) => {
                                             const selected = selectedEvidenceIdByCheckpoint[m.id] === ev.id || (!selectedEvidenceIdByCheckpoint[m.id] && ev.id === latestId)
+                                            const isPdf = ev.fileType === 'pdf' || ev.fileName || ev.content?.startsWith('PDF:')
+                                            const isArticle = ev.content?.startsWith('Article:')
+                                            const displayLabel = isPdf ? 'PDF' : isArticle ? 'Article' : 'Written'
+                                            const displayName = ev.fileName || (isPdf && ev.content?.replace(/^PDF:\s*/, '')) || (isArticle ? ev.content.replace(/^Article:\s*/, '').replace(/^https?:\/\//, '').slice(0, 30) + '…' : ev.content?.slice(0, 30) + (ev.content?.length > 30 ? '…' : ''))
                                             return (
                                               <div key={ev.id} onClick={(e) => { e.stopPropagation(); setSelectedEvidenceIdByCheckpoint(prev => ({ ...prev, [m.id]: ev.id })) } } className={`shrink-0 w-32 rounded-lg border p-3 flex flex-col gap-1 cursor-pointer ${selected ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200'}`}>
-                                                <div className="aspect-[4/3] rounded bg-muted flex items-center justify-center"><FileText className="h-8 w-8 text-muted-foreground" /></div>
-                                                <p className="text-[11px] text-muted-foreground">{new Date(ev.submittedAt).toLocaleDateString()}</p>
+                                                <div className="aspect-[4/3] rounded bg-muted flex items-center justify-center">{isPdf || displayLabel === 'Written' ? <FileText className="h-8 w-8 text-muted-foreground" /> : <Link2 className="h-8 w-8 text-muted-foreground" />}</div>
+                                                <Badge variant="outline" className="text-[10px] w-fit">{displayLabel}</Badge>
+                                                <p className="text-[11px] text-muted-foreground truncate" title={displayName}>{displayName}</p>
+                                                <p className="text-[10px] text-muted-foreground">{new Date(ev.submittedAt).toLocaleDateString()}</p>
                                               </div>
                                             )
                                           })
@@ -623,10 +604,16 @@ function StudentProjectContent() {
                                           const latestId = sortedByDate[0]?.id
                                           return forCheckpoint.map((ev) => {
                                             const selected = selectedEvidenceIdByCheckpoint[m.id] === ev.id || (!selectedEvidenceIdByCheckpoint[m.id] && ev.id === latestId)
+                                            const isPdf = ev.fileType === 'pdf' || ev.fileName || ev.content?.startsWith('PDF:')
+                                            const isArticle = ev.content?.startsWith('Article:')
+                                            const displayLabel = isPdf ? 'PDF' : isArticle ? 'Article' : 'Written'
+                                            const displayName = ev.fileName || (isPdf && ev.content?.replace(/^PDF:\s*/, '')) || (isArticle ? ev.content.replace(/^Article:\s*/, '').replace(/^https?:\/\//, '').slice(0, 30) + '…' : ev.content?.slice(0, 30) + (ev.content?.length > 30 ? '…' : ''))
                                             return (
                                               <div key={ev.id} onClick={(e) => { e.stopPropagation(); setSelectedEvidenceIdByCheckpoint(prev => ({ ...prev, [m.id]: ev.id })) } } className={`shrink-0 w-32 rounded-lg border p-3 flex flex-col gap-1 cursor-pointer ${selected ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200'}`}>
-                                                <div className="aspect-[4/3] rounded bg-muted flex items-center justify-center"><FileText className="h-8 w-8 text-muted-foreground" /></div>
-                                                <p className="text-[11px] text-muted-foreground">{new Date(ev.submittedAt).toLocaleDateString()}</p>
+                                                <div className="aspect-[4/3] rounded bg-muted flex items-center justify-center">{isPdf || displayLabel === 'Written' ? <FileText className="h-8 w-8 text-muted-foreground" /> : <Link2 className="h-8 w-8 text-muted-foreground" />}</div>
+                                                <Badge variant="outline" className="text-[10px] w-fit">{displayLabel}</Badge>
+                                                <p className="text-[11px] text-muted-foreground truncate" title={displayName}>{displayName}</p>
+                                                <p className="text-[10px] text-muted-foreground">{new Date(ev.submittedAt).toLocaleDateString()}</p>
                     </div>
                   )
                                           })
@@ -1014,19 +1001,24 @@ function StudentProjectContent() {
                             const avgScore = feedbacks.length > 0
                               ? (feedbacks.reduce((s, f) => s + f.score, 0) / feedbacks.length).toFixed(1)
                               : '—'
+                            const isPdf = ev.fileType === 'pdf' || ev.fileName || ev.content?.startsWith('PDF:')
+                            const isArticle = ev.content?.startsWith('Article:')
+                            const displayLabel = isPdf ? 'PDF' : isArticle ? 'Article' : 'Written'
+                            const displayName = ev.fileName || (isPdf && ev.content?.replace(/^PDF:\s*/, '')) || (isArticle ? ev.content.replace(/^Article:\s*/, '').replace(/^https?:\/\//, '').slice(0, 40) + '…' : ev.content?.slice(0, 40) + (ev.content?.length > 40 ? '…' : ''))
                             return (
                               <div
                                 key={ev.id}
                                 className="shrink-0 w-48 rounded-lg border bg-card p-4 flex flex-col gap-2"
                               >
                                 <div className="aspect-[4/3] rounded bg-muted flex items-center justify-center">
-                                  <FileText className="h-10 w-10 text-muted-foreground" />
+                                  {isPdf || displayLabel === 'Written' ? <FileText className="h-10 w-10 text-muted-foreground" /> : <Link2 className="h-10 w-10 text-muted-foreground" />}
                                 </div>
+                                <Badge variant="outline" className="text-[10px] w-fit">{displayLabel}</Badge>
                                 <p className="text-xs font-medium">Task {checkpointNum}</p>
                                 <p className="text-[11px] text-muted-foreground">
                                   {new Date(ev.submittedAt).toLocaleDateString()} · {avgScore}/4
                                 </p>
-                                <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{ev.content}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-2 flex-1" title={ev.content}>{displayName}</p>
                               </div>
                             )
                           })}
@@ -1211,24 +1203,18 @@ function StudentProjectContent() {
                     })()
                   ) : (
                     <div className="rounded-lg border border-stone-200 bg-white p-6 space-y-6">
-                      <p className="text-sm text-muted-foreground">Answer the following questions.</p>
+                      <p className="text-sm text-muted-foreground">Answer the following questions. Format depends on the assignment—for this demo, use the text fields below.</p>
                       {assessmentQuestions.map((q) => (
-                        <div key={q.id} className="space-y-3">
-                          <Label className="text-sm font-medium">{q.question}</Label>
-                          <RadioGroup
+                        <div key={q.id} className="space-y-2">
+                          <Label htmlFor={q.id} className="text-sm font-medium">{q.question}</Label>
+                          <Textarea
+                            id={q.id}
+                            placeholder={q.placeholder}
                             value={assessmentAnswers[q.id] ?? ''}
-                            onValueChange={(value) => setAssessmentAnswers((prev) => ({ ...prev, [q.id]: value }))}
-                            className="flex flex-col gap-2"
-                          >
-                            {q.options.map((opt) => (
-                              <div key={opt} className="flex items-center space-x-2">
-                                <RadioGroupItem value={opt} id={`${q.id}-${opt}`} />
-                                <Label htmlFor={`${q.id}-${opt}`} className="text-sm font-normal cursor-pointer">
-                                  {opt}
-                                </Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
+                            onChange={(e) => setAssessmentAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                            className="min-h-[80px] resize-none"
+                            rows={3}
+                          />
                         </div>
                       ))}
                       <Button
@@ -1236,8 +1222,8 @@ function StudentProjectContent() {
                         className="w-full sm:w-auto"
                         onClick={() => {
                           if (!selectedMilestone) return
-                          const answered = assessmentQuestions.filter((q) => !!assessmentAnswers[q.id]).length
-                          const score = Math.max(1, Math.min(4, answered)) // demo scoring
+                          const answered = assessmentQuestions.filter((q) => !!assessmentAnswers[q.id]?.trim()).length
+                          const score = Math.max(1, Math.min(4, answered)) // demo: 1-4 based on how many questions answered
                           const levelLabel = score === 4 ? 'Advanced' : score === 3 ? 'Proficient' : score === 2 ? 'Developing' : 'Beginning'
                           const note =
                             score <= 1
@@ -1282,7 +1268,7 @@ function StudentProjectContent() {
                       >
                         Done for now
                       </Button>
-                    </div>
+                          </div>
                   )}
                     </CardContent>
                   </Card>

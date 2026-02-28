@@ -59,7 +59,7 @@ function StatusBadge({ status }: { status: StudentRecord["status"] }) {
 
 // ---- Submission Drawer ----
 function SubmissionDrawer({ student, onClose }: { student: StudentRecord; onClose: () => void }) {
-  const isSarah = student.id === "s-001"
+  const isDemoStudent = student.id === "s1"
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -76,10 +76,10 @@ function SubmissionDrawer({ student, onClose }: { student: StudentRecord; onClos
         </div>
 
         <div className="p-5 flex flex-col gap-6">
-          {isSarah ? (
+          {isDemoStudent ? (
             <>
               {/* Step 1: Upload */}
-              <DrawerSection icon={Upload} title="1. Uploaded Essay" badge="287 words">
+              <DrawerSection icon={Upload} title="1. Uploaded Evidence" badge="Composting">
                 <div className="text-xs text-foreground leading-relaxed max-h-40 overflow-y-auto whitespace-pre-line bg-muted/50 p-3 rounded-lg">
                   {essayText.slice(0, 600)}...
                 </div>
@@ -177,7 +177,7 @@ function SubmissionDrawer({ student, onClose }: { student: StudentRecord; onClos
               </div>
               <p className="text-sm font-medium text-foreground">Submission details</p>
               <p className="text-xs text-muted-foreground max-w-[280px]">
-                In the full app, this drawer would show {student.name}{"'"}s complete workflow journey. Run the Student Demo to see a full example with Sarah Johnson.
+                In the full app, this drawer would show {student.name}{"'"}s complete workflow journey. Run the Student Demo to see a full example with Alex Chen.
               </p>
               {student.flagged && student.flagReason && (
                 <div className="mt-4 p-3 rounded-lg bg-red-500/5 border border-red-200 text-xs text-foreground leading-relaxed max-w-sm text-left">

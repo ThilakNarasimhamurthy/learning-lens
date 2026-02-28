@@ -255,29 +255,20 @@ function ProjectDetailContent() {
                         {subjectTag}
                       </Badge>
                       <p className="text-sm text-muted-foreground mt-2">{flag.reason}</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() =>
-                          openMessageDialog(
-                            getUserById(flag.studentId)?.name ?? flag.studentId,
-                            'message',
-                            flag.id
-                          )
-                        }
-                      >
-                        Send Message
-                      </Button>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            router.push(
+                              `/teacher/projects/${flag.projectId}/students/${flag.studentId}`
+                            )
+                          }
+                        >
+                          View
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0"
-                      aria-label="View progress"
-                    >
-                      <BarChart3 className="h-4 w-4 text-gray-500" />
-                    </Button>
                   </div>
                 )
               })}
@@ -355,8 +346,17 @@ function ProjectDetailContent() {
                       })}
                     </span>
                   </div>
-                  <h3 className="font-medium text-gray-900">Learn: {m.name}</h3>
-                  <p className="text-sm text-muted-foreground">{m.description}</p>
+                  <h3 className="font-medium text-gray-900">Checkpoint: {m.name}</h3>
+                  {m.objectives && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-0.5">Objectives</p>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line">{m.objectives}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-medium text-gray-600 mb-0.5">Tasks</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">{m.description}</p>
+                  </div>
                   <p className="text-sm font-medium">
                     Task Completed: {completedCount}/{totalStudents || 1}
                   </p>
@@ -415,9 +415,17 @@ function ProjectDetailContent() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="inline-flex items-center text-muted-foreground">
-                              <BarChart3 className="h-4 w-4" aria-label="Progress report" />
-                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-gray-900"
+                              aria-label={`View progress report for ${studentName}`}
+                              onClick={() =>
+                                router.push(`/teacher/projects/${project.id}/students/${p.studentId}`)
+                              }
+                            >
+                              <BarChart3 className="h-4 w-4" />
+                            </Button>
                           </td>
                         </tr>
                       )

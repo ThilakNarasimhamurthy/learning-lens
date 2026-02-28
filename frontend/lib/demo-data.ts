@@ -1,25 +1,23 @@
 // =============================================================
-// Central dummy data used across every component in the demo
+// Demo data — Composting Systems project only
 // =============================================================
 
 // ---- Student being demonstrated ----
 export const demoStudent = {
-  id: "s-001",
-  name: "Sarah Johnson",
-  avatar: "SJ",
-  class: "US History — Period 3",
-  assignment: "Civil Rights Movement Essay",
+  id: "s1",
+  name: "Alex Chen",
+  avatar: "AC",
+  class: "Period 1 Science",
+  assignment: "Composting Systems",
   submittedAt: "Feb 23 2026, 10:42 AM",
 }
 
-// ---- Uploaded Essay (abridged preview) ----
-export const essayText = `The Civil Rights Movement stands as one of the most transformative periods in American history. Beginning in the mid-1950s and extending through the late 1960s, this movement sought to end racial segregation and discrimination against African Americans and to secure legal recognition and federal protection of the citizenship rights enumerated in the Constitution.
+// ---- Uploaded evidence (composting content) ----
+export const essayText = `Aerobic bacteria need oxygen (O2) to break down organic matter into humus. Anaerobic bacteria in landfills produce methane (CH4) when air is lacking. Flow of Matter: food waste → cellular respiration/CO2 → humus.
 
-Martin Luther King Jr. emerged as the most visible spokesperson and leader in the Civil Rights Movement from 1955 until his assassination in 1968. King advanced civil rights through nonviolence and civil disobedience, inspired by his Christian beliefs and the nonviolent activism of Mahatma Gandhi. His leadership was instrumental in ending the legal segregation of African-American citizens in the South and other areas of the nation.
+The Carbon-to-Nitrogen (C:N) ratio of 30:1 is optimal for composting. Greens (nitrogen): food scraps. Browns (carbon): leaves, paper. Comparative table: three-bin vs vermicomposting for capacity, speed, labor.
 
-The Civil Rights Act of 1964 was a landmark piece of legislation that outlawed discrimination based on race, color, religion, sex, or national origin. It prohibited unequal application of voter registration requirements, racial segregation in schools, employment, and public accommodations. The act was proposed by President John F. Kennedy in June 1963 and signed into law by President Lyndon B. Johnson on July 2, 1964.
-
-The movement utilized a variety of tactics, including boycotts, sit-ins, marches, and voter registration drives. The Montgomery Bus Boycott of 1955-1956 was one of the first major campaigns, sparked by Rosa Parks' refusal to give up her seat. The Birmingham Campaign of 1963 drew national attention to the brutal treatment of protesters, which many historians argue directly influenced the passage of civil rights legislation.`
+Composting 101: Aerobic decomposition uses O2; anaerobic in landfills produces CH4. Flow diagram: inputs → process → humus.`
 
 // ---- AI "run" stats (mimics real API usage) ----
 export const demoAIStats = {
@@ -28,43 +26,45 @@ export const demoAIStats = {
   model: "GPT-4",
 }
 
-// ---- AI Analysis Results ----
+// ---- AI Analysis Results (Composting Systems) ----
 export const aiAnalysis = {
   keyConcepts: [
-    { label: "Civil Rights Movement", confidence: 0.97 },
-    { label: "Nonviolent Protest", confidence: 0.92 },
-    { label: "Martin Luther King Jr.", confidence: 0.95 },
-    { label: "Civil Rights Act 1964", confidence: 0.94 },
-    { label: "Legislative Change", confidence: 0.85 },
-    { label: "Birmingham Campaign", confidence: 0.88 },
-    { label: "Rosa Parks", confidence: 0.82 },
-    { label: "Montgomery Bus Boycott", confidence: 0.80 },
+    { label: "Aerobic bacteria", confidence: 0.97 },
+    { label: "Anaerobic decomposition", confidence: 0.92 },
+    { label: "Carbon-to-Nitrogen ratio", confidence: 0.95 },
+    { label: "Methane (CH4)", confidence: 0.94 },
+    { label: "Humus", confidence: 0.85 },
+    { label: "Three-bin system", confidence: 0.88 },
+    { label: "Vermicomposting", confidence: 0.82 },
+    { label: "Flow of Matter", confidence: 0.80 },
   ],
   skillScores: [
-    { skill: "Comprehension", score: 85, color: "emerald" },
-    { skill: "Analysis", score: 62, color: "amber" },
-    { skill: "Argumentation", score: 55, color: "red" },
-    { skill: "Writing Mechanics", score: 78, color: "emerald" },
+    { skill: "Scientific understanding", score: 85, color: "emerald" },
+    { skill: "System design", score: 72, color: "emerald" },
+    { skill: "Evidence & support", score: 65, color: "amber" },
+    { skill: "Communication", score: 78, color: "emerald" },
   ],
   summary:
-    "The student demonstrates strong factual knowledge of the Civil Rights Movement, correctly identifying key figures, events, and legislation. However, the essay relies primarily on description rather than analysis. Connections between events and their broader significance are stated but not explored in depth. The thesis is present but underdeveloped — it asserts importance without establishing an analytical framework. Writing mechanics are generally sound with minor issues in paragraph transitions.",
+    "The student demonstrates solid understanding of aerobic vs. anaerobic composting and the carbon cycle. C:N ratio and flow of matter are clearly explained. Consider adding more detail on moisture control, aeration, and system dimensions to strengthen the design criteria.",
 }
 
-/** Demo extraction result for the AI pipeline (Module 1: Evidence Extraction) */
+/** Demo extraction result for the AI pipeline (Composting Systems) */
 export function getDemoExtractionResult() {
   return {
     keyClaims: [
-      "Civil Rights Movement as transformative period in American history",
-      "Martin Luther King Jr. as leader; nonviolence and civil disobedience",
-      "Civil Rights Act of 1964 — landmark legislation; Kennedy proposed, Johnson signed",
-      "Tactics: boycotts, sit-ins, marches; Montgomery Bus Boycott, Birmingham Campaign",
+      "Aerobic bacteria need oxygen to break down organic matter into humus",
+      "Anaerobic bacteria in landfills produce methane (CH4)",
+      "Flow of Matter: food waste → cellular respiration/CO2 → humus",
+      "C:N ratio 30:1; greens (nitrogen) and browns (carbon)",
+      "Three-bin vs vermicomposting comparison",
     ],
     concepts: aiAnalysis.keyConcepts.map((c) => c.label),
-    argumentStructure: "Thesis (transformative period) → Key figures & events (King, Act of 1964) → Tactics (Montgomery, Birmingham) → Implied influence on legislation",
+    argumentStructure:
+      "Aerobic vs anaerobic → C:N ratio & inputs → Flow of matter → System comparison (three-bin vs vermicomposting)",
   }
 }
 
-// ---- Rubric Mapping ----
+// ---- Rubric Mapping (Composting Systems — aligns with per-week rubrics) ----
 export type RubricStatus = "met" | "partial" | "missing"
 
 export interface RubricRow {
@@ -79,58 +79,35 @@ export interface RubricRow {
 
 export const rubricMapping: RubricRow[] = [
   {
-    criterion: "Thesis Development",
-    level: "Proficient",
+    criterion: "Climate Resilience",
+    level: "Meets Standards",
     score: 3,
     maxScore: 4,
     status: "met",
-    evidenceFound:
-      'Clear thesis statement in paragraph 1: "one of the most transformative periods in American history."',
-    gap: "Thesis asserts importance but does not state an analytical argument about why/how.",
+    evidenceFound: "Identifies that cold is a problem and suggests basic insulation.",
+    gap: "Propose a more detailed winter plan with scientific reasoning (e.g., pile mass to retain metabolic heat).",
   },
   {
-    criterion: "Evidence & Support",
+    criterion: "Troubleshooting Logic",
+    level: "Meets Standards",
+    score: 3,
+    maxScore: 4,
+    status: "met",
+    evidenceFound: "Identifies anaerobic pile signs (odor) and suggests adding Browns or turning.",
+    gap: "Distinguish between different pile failures (Too Wet vs. Too Dry vs. Anaerobic) with distinct fixes.",
+  },
+  {
+    criterion: "Engineering Refinement",
     level: "Developing",
     score: 2,
     maxScore: 4,
     status: "partial",
-    evidenceFound:
-      "References to Montgomery Bus Boycott, Birmingham Campaign, Civil Rights Act, and multiple historical figures.",
-    gap: "Evidence is listed but not analyzed. No primary sources or direct quotes used to support claims.",
-  },
-  {
-    criterion: "Historical Analysis",
-    level: "Beginning",
-    score: 1,
-    maxScore: 4,
-    status: "missing",
-    evidenceFound:
-      'Brief mention that Birmingham "directly influenced" legislation.',
-    gap: "No analysis of cause-and-effect, no examination of opposing forces, no discussion of why 1964 was the turning point.",
-  },
-  {
-    criterion: "Cause & Effect Reasoning",
-    level: "Developing",
-    score: 2,
-    maxScore: 4,
-    status: "partial",
-    evidenceFound:
-      "Links Rosa Parks to Montgomery Boycott; links Birmingham to legislation.",
-    gap: "Causal chains are implied but not explicitly developed. Does not explain mechanisms of change.",
-  },
-  {
-    criterion: "Writing Mechanics",
-    level: "Proficient",
-    score: 3,
-    maxScore: 4,
-    status: "met",
-    evidenceFound:
-      "Well-structured paragraphs, correct grammar, appropriate academic vocabulary.",
-    gap: "Paragraph transitions could be smoother. Some sentences are overly long.",
+    evidenceFound: "Describes the original plan.",
+    gap: "Modify the Week 2 design based on research (e.g., add lid and drainage layer after researching rain impact).",
   },
 ]
 
-// ---- Guiding Prompts ----
+// ---- Guiding Prompts (Composting Systems — Climate, Troubleshooting, Engineering) ----
 export interface GuidingPrompt {
   id: number
   targetGap: string
@@ -141,52 +118,48 @@ export interface GuidingPrompt {
 export const guidingPrompts: GuidingPrompt[] = [
   {
     id: 1,
-    targetGap: "Historical Analysis",
+    targetGap: "Climate Resilience",
     difficulty: "Analytical",
     prompt:
-      "Your essay describes the Civil Rights Act but doesn't analyze WHY it passed when it did. What political and social pressures made 1964 the turning point? Consider the role of media coverage, the assassination of JFK, and the strategic decisions of civil rights leaders in making federal legislation unavoidable.",
+      "Propose a detailed winter plan for your composting system. Use scientific reasoning: e.g., increasing pile mass to retain metabolic heat. Consider insulation, tarp use, and location. Why does temperature matter for the microbes?",
   },
   {
     id: 2,
-    targetGap: "Evidence & Support",
-    difficulty: "Analytical",
+    targetGap: "Troubleshooting Logic",
+    difficulty: "Foundational",
     prompt:
-      "You mention Martin Luther King Jr.'s role but don't connect his strategy of nonviolent protest to specific legislative outcomes. How did the Birmingham Campaign directly influence Kennedy's decision to propose civil rights legislation? What specific images and events changed public opinion?",
+      "Clearly distinguish between different types of pile failure: Too Wet vs. Too Dry vs. Anaerobic. For each, what are the signs and what is the distinct fix? Explain the chemical fix for anaerobic conditions (odor) — why adding Browns or turning helps.",
   },
   {
     id: 3,
-    targetGap: "Cause & Effect Reasoning",
+    targetGap: "Engineering Refinement",
     difficulty: "Synthesis",
     prompt:
-      "Your conclusion restates your thesis but doesn't synthesize your argument. How do the events you described — from Montgomery to Birmingham to the signing of the Act — collectively demonstrate that the Civil Rights Movement was both a social AND political revolution? Build a causal chain that connects grassroots activism to federal policy change.",
+      "Modify your original Week 2 design based on new research or experience. What did you learn? For example: 'We added a lid and a drainage layer after researching rain impact.' Describe the refinements and justify them.",
   },
 ]
 
-// ---- Pre-filled Student Response ----
-export const studentResponse = `The Birmingham Campaign of 1963 was not merely a protest — it was a calculated strategic decision that fundamentally changed the political calculus of civil rights legislation. When Martin Luther King Jr. chose Birmingham, he selected the most segregated city in America, knowing that the brutal response of Police Commissioner Bull Connor would be broadcast on national television.
+// ---- Pre-filled Student Response (Composting) ----
+export const studentResponse = `The optimal C:N ratio for composting is 30:1. Carbon-rich "browns" (leaves, paper, cardboard) provide energy for microbes, while nitrogen-rich "greens" (food scraps, grass clippings) supply protein for cell growth. Too much carbon slows decomposition; too much nitrogen can cause odors and ammonia loss.
 
-The images of fire hoses and police dogs turned against peaceful protesters, including children, shocked the nation's conscience. President Kennedy himself told advisors that the Birmingham images made him "sick," and within weeks he proposed the most comprehensive civil rights bill in American history. This demonstrates a clear causal chain: strategic nonviolent protest provoked a violent overreaction, which generated media coverage, which shifted public opinion, which created political pressure for legislative action.
+My three-bin system would be 3ft × 3ft × 3ft per bin, placed in a sunny spot near the garden with good drainage. I would water when the pile feels dry (squeeze test — a few drops of moisture is ideal) and turn weekly with a pitchfork. The layered design and regular turning ensure oxygen reaches aerobic bacteria throughout the pile.`
 
-The passage of the Civil Rights Act in 1964 was not inevitable — it required the convergence of grassroots activism, media attention, political leadership, and the emotional impact of JFK's assassination. The movement was simultaneously a social revolution in changing hearts and minds AND a political revolution in transforming federal law. Without understanding both dimensions, we cannot fully grasp why this period was truly transformative.`
-
-// ---- Final Evaluation ----
+// ---- Final Evaluation (Composting Systems) ----
 export const evaluation = {
-  overallScore: 78,
+  overallScore: 82,
   maxScore: 100,
   grade: "B+",
   criterionScores: [
-    { criterion: "Thesis Development", before: 3, after: 3.5, max: 4 },
-    { criterion: "Evidence & Support", before: 2, after: 3, max: 4 },
-    { criterion: "Historical Analysis", before: 1, after: 3, max: 4 },
-    { criterion: "Cause & Effect", before: 2, after: 3.5, max: 4 },
-    { criterion: "Writing Mechanics", before: 3, after: 3.2, max: 4 },
+    { criterion: "Climate Resilience", before: 3, after: 4, max: 4 },
+    { criterion: "Troubleshooting Logic", before: 3, after: 4, max: 4 },
+    { criterion: "Engineering Refinement", before: 2, after: 3.5, max: 4 },
   ],
   feedback:
-    "Strong improvement in connecting events to legislative outcomes. The revised analysis of the Birmingham Campaign shows significantly deeper understanding of cause-and-effect relationships. The causal chain from protest to media coverage to political pressure to legislation is clearly articulated and well-supported. Continue developing primary source integration and consider addressing counter-arguments to strengthen your thesis further.",
-  improvement: "+16 points from initial submission",
+    "Strong improvement in climate resilience (winter plan with scientific reasoning) and troubleshooting logic (distinct fixes for Too Wet, Too Dry, Anaerobic). Engineering refinements show research-based modifications. Continue documenting design changes.",
+  improvement: "+18 points from initial submission",
 }
 
-// ---- Teacher Dashboard — All Students ----
+// ---- Teacher Dashboard — All Students (Composting Systems) ----
 export interface StudentRecord {
   id: string
   name: string
@@ -204,129 +177,67 @@ export interface StudentRecord {
 
 export const allStudents: StudentRecord[] = [
   {
-    id: "s-001",
-    name: "Sarah Johnson",
-    avatar: "SJ",
-    class: "US History — Period 3",
-    assignment: "Civil Rights Movement Essay",
-    score: 78,
+    id: "s1",
+    name: "Alex Chen",
+    avatar: "AC",
+    class: "Period 1 Science",
+    assignment: "Composting Systems",
+    score: 85,
     maxScore: 100,
     status: "on-track",
     lastActivity: "Just now",
     flagged: false,
   },
   {
-    id: "s-002",
-    name: "Marcus Chen",
-    avatar: "MC",
-    class: "US History — Period 3",
-    assignment: "Civil Rights Movement Essay",
-    score: 45,
+    id: "s2",
+    name: "Jordan Smith",
+    avatar: "JS",
+    class: "Period 1 Science",
+    assignment: "Composting Systems",
+    score: 42,
     maxScore: 100,
     status: "critical",
     lastActivity: "2 hours ago",
     flagged: true,
     flagReason:
-      "Scored below threshold on 4 of 5 rubric criteria. Essay shows significant factual errors about timeline of events.",
+      "Average score of 1.5/4 is below threshold. Consider scheduling one-on-one to review rubric and provide support.",
     flagSeverity: "high",
   },
   {
-    id: "s-003",
-    name: "Aisha Patel",
-    avatar: "AP",
-    class: "US History — Period 3",
-    assignment: "Civil Rights Movement Essay",
-    score: 91,
+    id: "s3",
+    name: "Sam Rivera",
+    avatar: "SR",
+    class: "Period 1 Science",
+    assignment: "Composting Systems",
+    score: 78,
     maxScore: 100,
     status: "on-track",
     lastActivity: "1 hour ago",
     flagged: false,
   },
   {
-    id: "s-004",
-    name: "James Wilson",
-    avatar: "JW",
-    class: "US History — Period 1",
-    assignment: "Civil Rights Movement Essay",
-    score: 58,
+    id: "s4",
+    name: "Taylor Kim",
+    avatar: "TK",
+    class: "Period 1 Science",
+    assignment: "Composting Systems",
+    score: 55,
     maxScore: 100,
     status: "needs-support",
     lastActivity: "3 hours ago",
     flagged: true,
     flagReason:
-      "Strong factual knowledge but consistently fails to develop analytical arguments. Third consecutive assignment below expectations on Analysis criterion.",
+      "No submissions in 6 days. Check in with student about barriers to progress.",
     flagSeverity: "medium",
-  },
-  {
-    id: "s-005",
-    name: "Emily Rodriguez",
-    avatar: "ER",
-    class: "US History — Period 1",
-    assignment: "Civil Rights Movement Essay",
-    score: 82,
-    maxScore: 100,
-    status: "on-track",
-    lastActivity: "30 min ago",
-    flagged: false,
-  },
-  {
-    id: "s-006",
-    name: "David Kim",
-    avatar: "DK",
-    class: "US History — Period 1",
-    assignment: "Civil Rights Movement Essay",
-    score: 34,
-    maxScore: 100,
-    status: "critical",
-    lastActivity: "5 hours ago",
-    flagged: true,
-    flagReason:
-      "Essay is well below minimum length. Only 2 of 4 paragraphs completed. AI analysis suggests student may not have understood the assignment requirements.",
-    flagSeverity: "high",
-  },
-  {
-    id: "s-007",
-    name: "Sofia Martinez",
-    avatar: "SM",
-    class: "US History — Period 3",
-    assignment: "Civil Rights Movement Essay",
-    score: 72,
-    maxScore: 100,
-    status: "needs-support",
-    lastActivity: "4 hours ago",
-    flagged: true,
-    flagReason:
-      "Writing mechanics are strong but historical analysis is consistently surface-level. May benefit from guided source analysis exercises.",
-    flagSeverity: "medium",
-  },
-  {
-    id: "s-008",
-    name: "Tyler Brooks",
-    avatar: "TB",
-    class: "US History — Period 1",
-    assignment: "Civil Rights Movement Essay",
-    score: 88,
-    maxScore: 100,
-    status: "on-track",
-    lastActivity: "2 hours ago",
-    flagged: false,
   },
 ]
 
-// ---- Class-level summaries ----
+// ---- Class-level summaries (Composting Systems) ----
 export const classSummaries = [
   {
-    name: "US History — Period 1",
+    name: "Period 1 Science",
     students: 4,
-    avgScore: 65.5,
-    onTrack: 2,
-    needsSupport: 1,
-    critical: 1,
-  },
-  {
-    name: "US History — Period 3",
-    students: 4,
-    avgScore: 71.5,
+    avgScore: 65,
     onTrack: 2,
     needsSupport: 1,
     critical: 1,
