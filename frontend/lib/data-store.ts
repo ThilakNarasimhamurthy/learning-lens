@@ -688,11 +688,12 @@ export function seedDemoData(opts?: { force?: boolean }): void {
     status: 'published'
   })
 
-  // —— Classes —— (one class, all students in Composting Systems)
+  // —— Classes —— Period 1: Composting (main demo). Period 2: Essay & Water Cycle placeholders
   const c1 = createClass({ name: 'Period 1 Science', teacherId, studentIds: ['s1', 's2', 's3', 's4'], projectIds: [] })
+  const c2 = createClass({ name: 'Period 2 Science', teacherId, studentIds: [], projectIds: [] })
   assignProjectToClass(c1.id, project.id)
-  assignProjectToClass(c1.id, proj2.id)
-  assignProjectToClass(c1.id, proj3.id)
+  assignProjectToClass(c2.id, proj2.id)
+  assignProjectToClass(c2.id, proj3.id)
 
   // —— Evidence, Feedback, Progress, Flags (dummy entries for full dashboard) ——
   const evidences: Evidence[] = []
