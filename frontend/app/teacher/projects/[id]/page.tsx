@@ -72,7 +72,11 @@ function ProjectDetailContent() {
     if (proj) {
       setProject(proj)
       setProgress(getProgressByProject(proj.id))
-      setFlags(dedupeById(getFlagsByProject(proj.id)))
+      setFlags(
+        dedupeById(getFlagsByProject(proj.id)).sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      )
       const ms = proj.milestones
       const now = new Date()
       const pastDue = ms.find((m) => new Date(m.dueDate) < now && (!m.opensOn || new Date(m.opensOn) <= now))

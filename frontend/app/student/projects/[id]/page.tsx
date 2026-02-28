@@ -277,7 +277,11 @@ function StudentProjectContent() {
                           {index + 1}
                         </button>
                         {index < project.milestones.length - 1 && (
-                          <div className="flex-1 h-0.5 bg-gray-200 min-w-[8px] mx-1" />
+                          <div
+                            className={`flex-1 h-0.5 min-w-[8px] mx-1 ${
+                              state === 'completed' ? 'bg-green-400' : 'bg-gray-200'
+                            }`}
+                          />
                         )}
                       </div>
                     )
@@ -287,12 +291,24 @@ function StudentProjectContent() {
               </div>
             </div>
 
-            {/* Legend */}
-            <div className="flex flex-wrap gap-4 p-4 rounded-lg bg-yellow-50/80 border border-yellow-200/80 text-xs text-yellow-900">
-              <span className="flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-green-600 bg-green-500 text-white font-semibold text-[10px]">1</span> Completed: green</span>
-              <span className="flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-red-500 bg-red-50 text-red-600 font-semibold text-xs">2</span> Past-due: red</span>
-              <span className="flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-primary bg-primary/5 text-primary font-semibold text-xs">3</span> Active: blue border</span>
-              <span className="flex items-center gap-2"><span className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-gray-300 bg-gray-50 text-muted-foreground font-semibold text-xs">4</span> Inactive: click to view</span>
+            {/* Legend — all 4 states */}
+            <div className="flex flex-wrap gap-4 p-4 rounded-lg bg-muted/50 border border-border text-xs">
+              <span className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-green-600 bg-green-500 text-white font-semibold text-xs">1</span>
+                <span className="text-foreground font-medium">Completed</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-red-500 bg-red-50 text-red-600 font-semibold text-xs">2</span>
+                <span className="text-foreground font-medium">Past-due</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-primary bg-primary/5 text-primary font-semibold text-xs">3</span>
+                <span className="text-foreground font-medium">Active</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-gray-300 bg-gray-50 text-muted-foreground font-semibold text-xs">4</span>
+                <span className="text-foreground font-medium">Inactive (click to view)</span>
+              </span>
             </div>
 
             {/* Checkpoint card for selected milestone */}

@@ -149,10 +149,10 @@ export function suggestCheckpointsFromProject(title: string, description: string
 }
 
 // Helper functions
-export function createProject(project: Omit<Project, 'id' | 'createdAt'>): Project {
+export function createProject(project: Omit<Project, 'id' | 'createdAt'> & { id?: string }): Project {
   const newProject: Project = {
     ...project,
-    id: `proj-${Date.now()}`,
+    id: project.id ?? `proj-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     createdAt: new Date().toISOString(),
   }
   const projects = store.projects
@@ -650,6 +650,7 @@ export function seedDemoData(opts?: { force?: boolean }): void {
     { id: 'm4', name: "How / Sustaining & Standardizing 'The Future' (Policy)", objectives: '• Present research findings to stakeholders.\n• Develop recommendations for a sustainable composting program.\n• Understand policy, regulation, and carbon credits.\n• Plan for scalable, long-term composting.', description: 'Upload Pre-assessment: Find resources comparing methane vs. carbon dioxide (GWP), and a case study of a successful composting program identifying a "Key to Success."\n\nComplete assessment: Create a final presentation or written report for the School Board/Principal — scientifically sound, logistically possible, and environmentally necessary. Address scalable composting, carbon credits, and policy.', rubric: UNIFIED_COMPOSTING_RUBRIC, dueDate: new Date(now.getTime() + 21 * day).toISOString().split('T')[0], order: 4, opensOn: new Date(now.getTime() + 14 * day).toISOString().split('T')[0] },
   ]
   const project = createProject({
+    id: 'proj-composting',
     title: 'Composting Systems',
     description: 'A 4-week project on composting: microbiology (aerobic/anaerobic), system design (C:N ratio, three-bin/vermicomposting), moisture control and troubleshooting, and final presentation on GWP and sustainable composting.',
     teacherId,
@@ -660,9 +661,38 @@ export function seedDemoData(opts?: { force?: boolean }): void {
     status: 'published'
   })
 
+  // —— Placeholder projects (no evidence, for dashboard variety) ——
+  const essayMilestones = suggestCheckpointsFromProject('Persuasive Essay on Climate Change', 'Write a persuasive essay on climate change policies. Use evidence from credible sources.')
+  const proj2 = createProject({
+    id: 'proj-climate-essay',
+    title: 'Persuasive Essay on Climate Change',
+    description: 'Write a persuasive essay arguing for climate change policies. Use evidence from at least 3 credible sources.',
+    teacherId,
+    standards: [STANDARDS_LIBRARY[0], STANDARDS_LIBRARY[1]],
+    rubric: generateRubricFromStandards([STANDARDS_LIBRARY[0], STANDARDS_LIBRARY[1]]),
+    milestones: essayMilestones.map((m, i) => ({ ...m, id: `p2-m${i + 1}` })),
+    taskType: 'individual',
+    status: 'published'
+  })
+
+  const investigationMilestones = suggestCheckpointsFromProject('Water Cycle Investigation', 'Science experiment on the water cycle.')
+  const proj3 = createProject({
+    id: 'proj-water-cycle',
+    title: 'Water Cycle Investigation',
+    description: 'Design and conduct an investigation to model the water cycle. Document hypothesis, method, and findings.',
+    teacherId,
+    standards: [STANDARDS_LIBRARY[4], STANDARDS_LIBRARY[5]],
+    rubric: generateRubricFromStandards([STANDARDS_LIBRARY[4], STANDARDS_LIBRARY[5]]),
+    milestones: investigationMilestones.map((m, i) => ({ ...m, id: `p3-m${i + 1}` })),
+    taskType: 'individual',
+    status: 'published'
+  })
+
   // —— Classes —— (one class, all students in Composting Systems)
   const c1 = createClass({ name: 'Period 1 Science', teacherId, studentIds: ['s1', 's2', 's3', 's4'], projectIds: [] })
   assignProjectToClass(c1.id, project.id)
+  assignProjectToClass(c1.id, proj2.id)
+  assignProjectToClass(c1.id, proj3.id)
 
   // —— Evidence, Feedback, Progress, Flags (dummy entries for full dashboard) ——
   const evidences: Evidence[] = []
@@ -725,9 +755,8 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   }
 
   // Composting Systems — evidence across 4 tasks to showcase all states
-  // s1: m1 completed, m2 completed — good progress
+  // s1 (Alex Chen): m1 completed only — so timeline shows all 4 states: completed, past-due, active, inactive
   addEvidenceAndFeedback('s1', project.id, 'm1', 'Aerobic bacteria need oxygen (O2) to break down organic matter into humus. Anaerobic bacteria in landfills produce methane (CH4) when air is lacking. Flow of Matter: food waste → cellular respiration/CO2 → humus.', [4, 3, 3])
-  addEvidenceAndFeedback('s1', project.id, 'm2', '30:1 Carbon-to-Nitrogen ratio. Greens (nitrogen): food scraps. Browns (carbon): leaves, paper. Comparative table: three-bin vs vermicomposting for capacity, speed, labor.', [4, 4, 3])
   // s2: m1 completed, low score — flagged
   addEvidenceAndFeedback('s2', project.id, 'm1', 'Found some info on composting. Bacteria and stuff.', [1, 2, 1])
   // s3: m1 and m2 completed — solid
@@ -798,7 +827,7 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   store.progress = progressList
   store.flags = flagsList
 
-  console.log('Demo data seeded: 1 project (Composting Systems), 1 class, evidence & progress & flags')
+  console.log('Demo data seeded: 3 projects (Composting Systems, Climate Essay, Water Cycle), 1 class, evidence & progress & flags')
 }
 
 // Helper to find class by join code

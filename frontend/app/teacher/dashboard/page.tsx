@@ -76,7 +76,9 @@ function DashboardContent() {
     }
   }, [])
 
-  const allFlags = dedupeById(projects.flatMap((p) => getFlagsByProject(p.id)))
+  const allFlags = dedupeById(projects.flatMap((p) => getFlagsByProject(p.id))).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
   const needSupportCount = allFlags.length
   const uniqueStudentCount = new Set(
     projects.flatMap((p) => getProgressByProject(p.id).map((x) => x.studentId))
