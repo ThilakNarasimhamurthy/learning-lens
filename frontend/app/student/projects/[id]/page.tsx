@@ -582,7 +582,24 @@ function StudentProjectContent() {
                                           {assessment?.note ?? 'Failed to demonstrate thinking and reasoning, only provided online resources'}
                                         </p>
                                       </div>
-                                      <div className="rounded-lg border border-gray-200 bg-gray-100 min-h-[120px]" aria-hidden />
+                                      <div className="flex gap-3">
+                                        {(() => {
+                                          const forCheckpoint = evidence.filter((ev) => ev.milestoneId === m.id)
+                                          const latestEv = [...forCheckpoint].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0]
+                                          const displayDate = latestEv ? new Date(latestEv.submittedAt).toLocaleDateString() : '—'
+                                          const levelLabel = assessment?.levelLabel ?? 'Beginning'
+                                          const score = assessment?.score ?? 1
+                                          const displayName = `${levelLabel} (${score})`
+                                          return (
+                                            <div className="shrink-0 w-32 rounded-lg border border-gray-200 p-3 flex flex-col gap-1 bg-white">
+                                              <div className="aspect-[4/3] rounded bg-muted flex items-center justify-center"><ClipboardList className="h-8 w-8 text-muted-foreground" /></div>
+                                              <Badge variant="outline" className="text-[10px] w-fit">Assessment</Badge>
+                                              <p className="text-[11px] text-muted-foreground truncate" title={displayName}>{displayName}</p>
+                                              <p className="text-[10px] text-muted-foreground">{displayDate}</p>
+                                            </div>
+                                          )
+                                        })()}
+                                      </div>
                                       <div className="rounded-lg border border-stone-200 bg-stone-50/80 p-5 text-center space-y-3">
                                         <div>
                                           <p className="text-base font-medium text-foreground">Want to try again?</p>
@@ -592,7 +609,7 @@ function StudentProjectContent() {
                       </div>
                                         <Button
                                           variant="outline"
-                                          className={checkpointState === 'completed' ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' : undefined}
+                                          className="border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-800"
                                           onClick={(e) => {
                                             e.stopPropagation()
                                             setSelectedMilestone(m.id)
