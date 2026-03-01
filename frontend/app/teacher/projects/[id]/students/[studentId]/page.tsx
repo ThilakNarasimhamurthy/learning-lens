@@ -55,17 +55,29 @@ function ProgressReportContent() {
   const avgScore = feedbacks.length > 0
     ? feedbacks.reduce((s, f) => s + f.score, 0) / feedbacks.length
     : 0
-  const levelLabel =
-    avgScore >= 3.5 ? 'Advanced' : avgScore >= 2.5 ? 'Proficient' : avgScore >= 1.5 ? 'Developing' : 'Beginning'
-  const levelScore = Math.round(avgScore) || 1
+  const isDemoComposting =
+    project.title.toLowerCase().includes('composting') && studentId === 's1'
+  const levelLabel = isDemoComposting
+    ? 'Beginning'
+    : avgScore >= 3.5 ? 'Advanced' : avgScore >= 2.5 ? 'Proficient' : avgScore >= 1.5 ? 'Developing' : 'Beginning'
+  const levelScore = isDemoComposting ? 1 : Math.round(avgScore) || 1
   const assessmentNote =
     feedbacks.find((f) => f.gaps?.length)?.gaps?.[0] ??
     feedbacks.find((f) => f.nextSteps)?.nextSteps ??
     'Failed to demonstrate thinking and reasoning. only provided online resources.'
 
-  const matchCriteria = feedbacks.map((fb) => {
+  // Teacher dashboard: use area-of-improvement framing (not student-facing "consider submitting" language)
+  const matchingCriterionDescription =
+    "Area of improvement: The resource identifies that the pile smells, but it lacks the diagnostic depth to explain why (e.g., an excess of nitrogen/greens). To improve this, find a source that links the ammonia scent to the need for specific 'carbon-rich' bulking agents."
+
+  const matchCriteria = feedbacks.map((fb, idx) => {
     const criterion = rubric.find((r) => r.id === fb.criterionId)
-    const matchType: 'strong' | 'partial' = fb.score >= 3 ? 'strong' : 'partial'
+    let matchType: 'strong' | 'partial' = fb.score >= 3 ? 'strong' : 'partial'
+    // Demo: Troubleshooting Logic and Engineering Refinement → Partial Match for consistent story
+    if (isDemoComposting && criterion) {
+      const name = criterion.name.toLowerCase()
+      if (name.includes('troubleshooting') || name.includes('engineering')) matchType = 'partial'
+    }
     return {
       name: criterion?.name ?? 'Criterion',
       description: criterion?.description ?? '',
@@ -75,10 +87,17 @@ function ProgressReportContent() {
 
   if (matchCriteria.length === 0 && rubric.length > 0) {
     rubric.forEach((c) => {
+      const name = c.name.toLowerCase()
+      const matchType: 'strong' | 'partial' =
+        isDemoComposting && (name.includes('troubleshooting') || name.includes('engineering'))
+          ? 'partial'
+          : isDemoComposting && name.includes('climate')
+            ? 'strong'
+            : 'partial'
       matchCriteria.push({
         name: c.name,
         description: c.description,
-        matchType: 'partial' as const,
+        matchType,
       })
     })
   }
@@ -210,8 +229,7 @@ function ProgressReportContent() {
             </Badge>
           </div>
           <p className="text-xs text-gray-600 mb-4">
-            This article may not be suitable for demonstrating all rubric criteria. Consider
-            submitting additional articles or resources to cover the remaining criteria.
+            {matchingCriterionDescription}
           </p>
           <div className="space-y-3">
             {matchCriteria.map((m, idx) => (
@@ -254,7 +272,7 @@ function ProgressReportContent() {
               AI Generated
             </Badge>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
               <span
                 className={`h-2 w-2 rounded-full ${
@@ -267,6 +285,34 @@ function ProgressReportContent() {
               </p>
             </div>
             <p className="text-sm text-gray-600">{assessmentNote}</p>
+            {latestEvidence && (
+              <div className="pt-3 border-t border-gray-100">
+                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-2">Assessment artifact</p>
+                <div className="shrink-0 w-full max-w-[192px] rounded-lg border border-gray-200 bg-white flex flex-col overflow-hidden">
+                  <div className="aspect-[4/3] rounded-t-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
+                    {(() => {
+                      const d = getEvidenceDisplay(latestEvidence)
+                      return d?.isPdf || d?.label === 'Written' ? (
+                        <FileText className="h-10 w-10 text-gray-400" />
+                      ) : (
+                        <Link2 className="h-10 w-10 text-gray-400" />
+                      )
+                    })()}
+                  </div>
+                  <div className="p-3 flex flex-col gap-2 flex-1 min-w-0">
+                    <Badge variant="outline" className="text-[10px] w-fit bg-gray-100 text-gray-700 border-gray-200">
+                      {getEvidenceDisplay(latestEvidence)?.label ?? 'Written'}
+                    </Badge>
+                    <p className="text-xs font-medium text-gray-900 truncate" title={latestEvidence.content}>
+                      {getEvidenceDisplay(latestEvidence)?.name ?? 'Evidence'}
+                    </p>
+                    <p className="text-[11px] text-gray-500">
+                      {new Date(latestEvidence.submittedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </main>

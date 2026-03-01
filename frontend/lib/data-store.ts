@@ -2,6 +2,7 @@ import type { Project, Class, Evidence, Feedback, StudentProgress, Standard, Fla
 import {
   getDemoExtractionResult,
   rubricMapping,
+  weakEvidenceRubricMapping,
   guidingPrompts,
   type RubricRow,
 } from './demo-data'
@@ -250,12 +251,23 @@ export function submitEvidence(evidence: Omit<Evidence, 'id' | 'submittedAt' | '
 }
 
 // Map project rubric criterion to demo rubric row (Composting Systems — Climate Resilience, Troubleshooting Logic, Engineering Refinement)
-function getDemoRowForCriterion(criterion: { name: string }, index: number): RubricRow {
-  const matched = rubricMapping.find((r) =>
+function getDemoRowForCriterion(criterion: { name: string }, index: number, mapping: RubricRow[]): RubricRow {
+  const matched = mapping.find((r) =>
     criterion.name.toLowerCase().includes(r.criterion.toLowerCase().split(' ')[0])
   )
   if (matched) return matched
-  return rubricMapping[Math.min(index, rubricMapping.length - 1)]
+  return mapping[Math.min(index, mapping.length - 1)]
+}
+
+// Detect weak evidence: just Article: URL or very short content with no substantive text (exported for assessment logic)
+export function isWeakEvidence(content: string): boolean {
+  if (!content?.trim()) return true
+  const trimmed = content.trim()
+  // Article: URL only — single token, no substantive analysis (e.g., "Article: Figma.com", "Article: ff")
+  if (/^Article:\s*\S+\s*$/.test(trimmed)) return true
+  // Very short content (< 80 chars) — link-only or minimal input
+  if (trimmed.length < 80) return true
+  return false
 }
 
 // AI Analysis Pipeline (mimics real AI using demo data)
@@ -272,8 +284,9 @@ function runAIAnalysisPipeline(evidence: Evidence) {
   const milestone = project.milestones.find((m) => m.id === evidence.milestoneId)
   const rubric = milestone?.rubric ?? project.rubric
 
+  const mapping = isWeakEvidence(evidence.content || '') ? weakEvidenceRubricMapping : rubricMapping
   rubric.forEach((criterion, index) => {
-    const demoRow = getDemoRowForCriterion(criterion, index)
+    const demoRow = getDemoRowForCriterion(criterion, index, mapping)
     const score = demoRow.score
     const maxScore = demoRow.maxScore
     const alignmentScore = score / maxScore
@@ -756,8 +769,9 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   }
 
   // Composting Systems — evidence across 4 tasks to showcase all states
-  // s1 (Alex Chen): m1 completed only — so timeline shows all 4 states: completed, past-due, active, inactive
+  // s1 (Alex Chen): m1 and m2 completed — both checkpoints show full completed UI
   addEvidenceAndFeedback('s1', project.id, 'm1', 'Aerobic bacteria need oxygen (O2) to break down organic matter into humus. Anaerobic bacteria in landfills produce methane (CH4) when air is lacking. Flow of Matter: food waste → cellular respiration/CO2 → humus.', [4, 3, 3])
+  addEvidenceAndFeedback('s1', project.id, 'm2', 'C:N ratio 30:1 for optimal composting. Three-bin system vs vermicomposting: capacity, odor management, labor, cost. Decision matrix comparing process speed and aesthetics.', [3, 3, 3])
   // s2: m1 completed, low score — flagged
   addEvidenceAndFeedback('s2', project.id, 'm1', 'Found some info on composting. Bacteria and stuff.', [1, 2, 1])
   // s3: m1 and m2 completed — solid
@@ -827,6 +841,13 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   store.aiAnalysis = analyses
   store.progress = progressList
   store.flags = flagsList
+
+  // Seed assessment results for s1 (student1@demo.com) on Composting project — m1 completed only; m2 has evidence but no assessment (past-due)
+  const assessmentResultsKey = 'learning_lens_assessment_results:s1:proj-composting'
+  const assessmentResults: Record<string, { levelLabel: string; score: number; note: string }> = {
+    m1: { levelLabel: 'Proficient', score: 3, note: 'Solid understanding shown with mostly clear reasoning and evidence.' },
+  }
+  saveToStorage(assessmentResultsKey, assessmentResults)
 
   console.log('Demo data seeded: 3 projects (Composting Systems, Climate Essay, Water Cycle), 1 class, evidence & progress & flags')
 }

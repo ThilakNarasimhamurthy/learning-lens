@@ -9,7 +9,6 @@ import {
   getProgressByProject,
   getClassesByTeacher,
   getFlagsByProject,
-  assignProjectToClass,
   getEvidenceByProject,
 } from '@/lib/data-store'
 import { dedupeById } from '@/lib/utils'
@@ -24,7 +23,6 @@ import {
   Trophy,
   BarChart3,
 } from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -52,7 +50,6 @@ function ProjectDetailContent() {
   const [messageDialogRecipient, setMessageDialogRecipient] = useState('')
   const [messageDialogType, setMessageDialogType] = useState<'message' | 'guidance'>('message')
   const [messageBody, setMessageBody] = useState('')
-  const [selectedClassIdToAssign, setSelectedClassIdToAssign] = useState<string>('')
   const [messageSentForFlagIds, setMessageSentForFlagIds] = useState<Set<string>>(new Set())
   const [messageDialogFlagId, setMessageDialogFlagId] = useState<string | null>(null)
 
@@ -142,28 +139,6 @@ function ProjectDetailContent() {
     setMessageDialogFlagId(null)
   }
 
-  const handleAssignToClass = () => {
-    if (!user || !project || !selectedClassIdToAssign) return
-    const classId = selectedClassIdToAssign
-    const success = assignProjectToClass(classId, project.id)
-    const classData = classes.find((c) => c.id === classId)
-    const className = classData?.name || 'class'
-    if (success) {
-      toast({
-        title: 'Assigned to class',
-        description: `This project is now assigned to ${className}.`,
-      })
-      setClasses(dedupeById(getClassesByTeacher(user.id)))
-      setSelectedClassIdToAssign('')
-    } else {
-      toast({
-        title: 'Already assigned',
-        description: `This project is already assigned to ${className}.`,
-        variant: 'destructive',
-      })
-    }
-  }
-
   if (!project) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
 
   const totalStudents = progress.length
@@ -192,11 +167,6 @@ function ProjectDetailContent() {
       .filter((p) => !completed.has(p.studentId))
       .map((p) => getUserById(p.studentId)?.name ?? p.studentId)
       .slice(0, 5)
-  }
-
-  const getStudentGroup = (studentId: string) => {
-    const cls = assignedClasses.find((c) => c.studentIds.includes(studentId))
-    return cls?.name ?? '—'
   }
 
   const displayCheckpoints = selectedCheckpoints.length > 0
@@ -361,9 +331,6 @@ function ProjectDetailContent() {
                     <p className="text-xs font-medium text-gray-600 mb-0.5">Tasks</p>
                     <p className="text-sm text-muted-foreground whitespace-pre-line">{m.description}</p>
                   </div>
-                  <p className="text-sm font-medium">
-                    Task Completed: {completedCount}/{totalStudents || 1}
-                  </p>
                   {supportNeeded.length > 0 && (
                     <div>
                       <p className="text-xs font-medium text-gray-600 mb-1">Support Needed:</p>
@@ -393,7 +360,6 @@ function ProjectDetailContent() {
                   <thead>
                     <tr className="border-b bg-gray-50">
                       <th className="text-left font-medium text-gray-700 px-4 py-3">Name</th>
-                      <th className="text-left font-medium text-gray-700 px-4 py-3">Group</th>
                       <th className="text-left font-medium text-gray-700 px-4 py-3">Success Indicator</th>
                       <th className="text-left font-medium text-gray-700 px-4 py-3">Progress Report</th>
                     </tr>
@@ -407,7 +373,6 @@ function ProjectDetailContent() {
                           className="border-b last:border-0 hover:bg-gray-50/50"
                         >
                           <td className="px-4 py-3 font-medium text-gray-900">{studentName}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{getStudentGroup(p.studentId)}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
                               <span
@@ -440,35 +405,6 @@ function ProjectDetailContent() {
             )}
           </div>
         </section>
-
-        {/* Assign to Class (compact) */}
-        {classes.length > 0 && (
-          <section className="rounded-lg border bg-white p-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Assign to Class</h3>
-            {assignedClasses.length > 0 && (
-              <p className="text-xs text-muted-foreground mb-2">
-                Assigned to: {assignedClasses.map((c) => c.name).join(', ')}
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Select value={selectedClassIdToAssign} onValueChange={setSelectedClassIdToAssign}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select a class" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAssignToClass} disabled={!selectedClassIdToAssign}>
-                Assign to class
-              </Button>
-            </div>
-          </section>
-        )}
       </main>
 
       <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>

@@ -107,6 +107,37 @@ export const rubricMapping: RubricRow[] = [
   },
 ]
 
+// Weak evidence (e.g., just Article: URL with no substantive content) — scores 1, 1, 2
+export const weakEvidenceRubricMapping: RubricRow[] = [
+  {
+    criterion: "Climate Resilience",
+    level: "Below Standards",
+    score: 1,
+    maxScore: 4,
+    status: "not_met",
+    evidenceFound: "Ignores the impact of climate/temperature on the system.",
+    gap: "Propose a detailed winter plan with scientific reasoning (e.g., pile mass to retain metabolic heat).",
+  },
+  {
+    criterion: "Troubleshooting Logic",
+    level: "Below Standards",
+    score: 1,
+    maxScore: 4,
+    status: "not_met",
+    evidenceFound: "Cannot identify how to fix a failing compost pile.",
+    gap: "Distinguish between different pile failures (Too Wet vs. Too Dry vs. Anaerobic) with distinct fixes.",
+  },
+  {
+    criterion: "Engineering Refinement",
+    level: "Approaching Standards",
+    score: 2,
+    maxScore: 4,
+    status: "partial",
+    evidenceFound: "Describes the original plan again without adding new safeguards or refinements.",
+    gap: "Modify the Week 2 design based on research (e.g., add lid and drainage layer after researching rain impact).",
+  },
+]
+
 // ---- Guiding Prompts (Composting Systems — Climate, Troubleshooting, Engineering) ----
 export interface GuidingPrompt {
   id: number

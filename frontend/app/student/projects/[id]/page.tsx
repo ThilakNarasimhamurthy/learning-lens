@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AuthGuard } from '@/components/auth-guard'
 import { getCurrentUser } from '@/lib/auth'
-import { getProject, submitEvidence, getEvidenceByStudent, getFeedbackByEvidence, getStudentProgress, getClassesByStudent, getRubricForMilestone } from '@/lib/data-store'
+import { getProject, submitEvidence, getEvidenceByStudent, getFeedbackByEvidence, getStudentProgress, getClassesByStudent, getRubricForMilestone, isWeakEvidence } from '@/lib/data-store'
 import { dedupeById } from '@/lib/utils'
 import type { Project, Evidence, Feedback } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -18,9 +18,7 @@ import { ArrowLeft, Upload, CheckCircle, Clock, FileText, ChevronDown, ChevronUp
 import { AIProcessSteps } from '@/components/ai-indicator'
 
 const assessmentQuestions = [
-  { id: 'q1', question: 'What is the main purpose of the evidence you uploaded?', placeholder: 'Describe how your evidence supports your learning...' },
-  { id: 'q2', question: 'How well does your evidence address the rubric criteria?', placeholder: 'Explain how your submission addresses the criteria...' },
-  { id: 'q3', question: 'What would you do to strengthen your submission?', placeholder: 'Reflect on areas for improvement...' },
+  { id: 'q1', question: 'Share your reflection', placeholder: 'Describe how your evidence supports your learning...' },
 ]
 
 /** Convert RubricCriterion[] to display format (title, subtitle, levels) */
@@ -208,11 +206,14 @@ function StudentProjectContent() {
 
   const getMilestoneState = (m: (typeof project.milestones)[0]) => {
     const hasEvidence = evidence.some((ev) => ev.milestoneId === m.id)
+    const hasAssessment = !!assessmentResults[m.id]
     const now = new Date()
     const dueDate = new Date(m.dueDate)
     const isNotOpenYet = m.opensOn && new Date(m.opensOn) > now
-    if (hasEvidence) return 'completed'
     if (isNotOpenYet) return 'inactive'
+    // Completed = evidence + assessment done → green (takes precedence over past-due)
+    if (hasEvidence && hasAssessment) return 'completed'
+    // Past-due = overdue and not yet completed
     if (dueDate < now) return 'past-due'
     return 'active'
   }
@@ -327,11 +328,11 @@ function StudentProjectContent() {
                   : checkpointState === 'inactive'
                     ? 'Inactive Task'
                     : checkpointState === 'past-due'
-                      ? 'Past due'
+                      ? 'Task Past Due'
                       : 'Active'
               const statusBadgeClass =
                 checkpointState === 'completed'
-                  ? 'bg-green-100 text-green-800 border-green-200'
+                  ? 'bg-green-600 text-white border-green-600'
                   : checkpointState === 'inactive'
                     ? 'bg-gray-100 text-gray-600 border-gray-200'
                     : checkpointState === 'past-due'
@@ -457,7 +458,7 @@ function StudentProjectContent() {
                                       <Button
                                         variant="secondary"
                                         size="sm"
-                                        className="border border-gray-200"
+                                        className={checkpointState === 'past-due' ? 'bg-red-600 hover:bg-red-700 text-white border-red-600' : 'border border-gray-200'}
                                         onClick={(e) => {
                                           e.stopPropagation()
                                           setSelectedMilestone(m.id)
@@ -520,9 +521,6 @@ function StudentProjectContent() {
                                       <p className="text-sm font-semibold text-foreground">Matching Criterion</p>
                                       <Badge variant="secondary" className="text-[10px]">AI Generated</Badge>
                                     </div>
-                                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                                      Note: This article may not be suitable for demonstrating all rubric criteria. Consider submitting additional articles or resources to cover the remaining criteria.
-                                    </div>
                                     <div className="space-y-2">
                                       <div className="flex items-center justify-between gap-3 rounded-lg border bg-white p-3">
                                         <div>
@@ -537,6 +535,13 @@ function StudentProjectContent() {
                                           <p className="text-xs text-muted-foreground">Quality of claim, counterclaims, and reasoning</p>
                                         </div>
                                         <Badge className="bg-amber-100 text-amber-800 border-amber-200">Partial Match</Badge>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-3 rounded-lg border bg-white p-3">
+                                        <div>
+                                          <p className="font-medium text-sm">Argument Development</p>
+                                          <p className="text-xs text-muted-foreground">Quality of claim, counterclaims, and reasoning</p>
+                                        </div>
+                                        <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-300">Not Covered</Badge>
                                       </div>
                                     </div>
                                   </div>
@@ -563,7 +568,12 @@ function StudentProjectContent() {
                                       <div>
                                         <p className="text-xs text-muted-foreground">Current Submission</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                          <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden />
+                                          <span
+                                            className={`h-2 w-2 rounded-full ${
+                                              (assessment?.score ?? 1) >= 3 ? 'bg-green-500' : (assessment?.score ?? 1) >= 2 ? 'bg-amber-500' : 'bg-red-500'
+                                            }`}
+                                            aria-hidden
+                                          />
                                           <p className="text-sm font-semibold text-foreground">
                                             {assessment?.levelLabel ?? 'Beginning'} ({assessment?.score ?? 1})
                                           </p>
@@ -582,6 +592,7 @@ function StudentProjectContent() {
                       </div>
                                         <Button
                                           variant="outline"
+                                          className={checkpointState === 'completed' ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' : undefined}
                                           onClick={(e) => {
                                             e.stopPropagation()
                                             setSelectedMilestone(m.id)
@@ -1102,10 +1113,19 @@ function StudentProjectContent() {
                       const forTask = selectedMilestone ? evidence.filter((ev) => ev.milestoneId === selectedMilestone) : []
                       const latestEv = [...forTask].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0]
                       const aiFeedbacks = latestEv ? getFeedbackByEvidence(latestEv.id) : []
-                      const avgScore = aiFeedbacks.length > 0 ? aiFeedbacks.reduce((s, f) => s + f.score, 0) / aiFeedbacks.length : (assessmentResults[selectedMilestone!]?.score ?? 1)
-                      const levelLabel = assessmentResults[selectedMilestone!]?.levelLabel ?? (avgScore >= 3.5 ? 'Advanced' : avgScore >= 2.5 ? 'Proficient' : avgScore >= 1.5 ? 'Developing' : 'Beginning')
+                      const savedResult = assessmentResults[selectedMilestone!]
+                      const evidenceIsWeak = latestEv ? isWeakEvidence(latestEv.content || '') : false
+                      // When evidence is weak (e.g., just Article: URL), always show Beginning (1) in red
+                      const avgScore = evidenceIsWeak
+                        ? 1
+                        : savedResult != null
+                          ? savedResult.score
+                          : aiFeedbacks.length > 0
+                            ? aiFeedbacks.reduce((s, f) => s + f.score, 0) / aiFeedbacks.length
+                            : 1
+                      const levelLabel = evidenceIsWeak ? 'Beginning' : (savedResult?.levelLabel ?? (avgScore >= 3.5 ? 'Advanced' : avgScore >= 2.5 ? 'Proficient' : avgScore >= 1.5 ? 'Developing' : 'Beginning'))
                       const displayScore = Math.round(avgScore)
-                      const note = assessmentResults[selectedMilestone!]?.note ?? (aiFeedbacks.length > 0 ? `Overall performance: ${avgScore.toFixed(1)}/4 across rubric criteria.` : '')
+                      const note = evidenceIsWeak ? 'Failed to demonstrate thinking and reasoning. Only provided online resources.' : (savedResult?.note ?? (aiFeedbacks.length > 0 ? `Overall performance: ${avgScore.toFixed(1)}/4 across rubric criteria.` : ''))
                       const mapCriterionToRubric = (criterionId: string) => {
                         const idx = parseInt(criterionId.replace(/\D/g, ''), 10) - 1
                         return rubricCategories[Math.max(0, Math.min(idx, rubricCategories.length - 1))]
@@ -1219,7 +1239,7 @@ function StudentProjectContent() {
                     })()
                   ) : (
                     <div className="rounded-lg border border-stone-200 bg-white p-6 space-y-6">
-                      <p className="text-sm text-muted-foreground">Answer the following questions. Format depends on the assignment—for this demo, use the text fields below.</p>
+                      <p className="text-sm text-muted-foreground">Share your reflection on your evidence below.</p>
                       {assessmentQuestions.map((q) => (
                         <div key={q.id} className="space-y-2">
                           <Label htmlFor={q.id} className="text-sm font-medium">{q.question}</Label>
@@ -1238,8 +1258,13 @@ function StudentProjectContent() {
                         className="w-full sm:w-auto"
                         onClick={() => {
                           if (!selectedMilestone) return
+                          const forTask = evidence.filter((ev) => ev.milestoneId === selectedMilestone)
+                          const latestEv = [...forTask].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0]
+                          const evidenceIsWeak = latestEv ? isWeakEvidence(latestEv.content || '') : false
                           const answered = assessmentQuestions.filter((q) => !!assessmentAnswers[q.id]?.trim()).length
-                          const score = Math.max(1, Math.min(4, answered)) // demo: 1-4 based on how many questions answered
+                          // When evidence is weak (e.g., just Article: URL), use score 1 regardless of answers
+                          // Single reflection question: answered = Proficient (3), not answered = Beginning (1)
+                          const score = evidenceIsWeak ? 1 : (answered >= 1 ? 3 : 1)
                           const levelLabel = score === 4 ? 'Advanced' : score === 3 ? 'Proficient' : score === 2 ? 'Developing' : 'Beginning'
                           const note =
                             score <= 1
