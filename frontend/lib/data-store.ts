@@ -845,7 +845,7 @@ export function seedDemoData(opts?: { force?: boolean }): void {
   // Seed assessment results for s1 (student1@demo.com) on Composting project — m1 completed only; m2 has evidence but no assessment (past-due)
   const assessmentResultsKey = 'learning_lens_assessment_results:s1:proj-composting'
   const assessmentResults: Record<string, { levelLabel: string; score: number; note: string }> = {
-    m1: { levelLabel: 'Proficient', score: 3, note: 'Solid understanding shown with mostly clear reasoning and evidence.' },
+    m1: { levelLabel: 'Beginning', score: 1, note: 'Failed to demonstrate thinking and reasoning. Only provided online resources.' },
   }
   saveToStorage(assessmentResultsKey, assessmentResults)
 
