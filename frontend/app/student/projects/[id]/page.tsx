@@ -18,7 +18,7 @@ import { ArrowLeft, Upload, CheckCircle, Clock, FileText, ChevronDown, ChevronUp
 import { AIProcessSteps } from '@/components/ai-indicator'
 
 const assessmentQuestions = [
-  { id: 'q1', question: 'Share your reflection', placeholder: 'Describe how your evidence supports your learning...' },
+  { id: 'q1', question: 'Using your research, you must identify problems with your Task 2 design and propose specific modifications to ensure the system remains aerobic and functional year-round.', placeholder: 'Describe how your evidence supports your learning...' },
 ]
 
 /** Convert RubricCriterion[] to display format (title, subtitle, levels) */
@@ -991,6 +991,12 @@ function StudentProjectContent() {
                           ) : (
                             <p className="text-xs text-muted-foreground">Your evidence will be matched to rubric criteria.</p>
                 )}
+                <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3">
+                  <p className="text-xs font-semibold text-amber-900 mb-1">Pro-Tip</p>
+                  <p className="text-xs text-amber-900">
+                    The resource uploaded identifies that the pile smells, but it lacks the diagnostic depth to explain why (e.g., an excess of nitrogen/greens). To improve this, find a source that links the ammonia scent to the need for specific &quot;carbon-rich&quot; bulking agents.
+                  </p>
+                </div>
                 <Button
                             variant="outline"
                             size="sm"
@@ -1256,7 +1262,7 @@ function StudentProjectContent() {
                     })()
                   ) : (
                     <div className="rounded-lg border border-stone-200 bg-white p-6 space-y-6">
-                      <p className="text-sm text-muted-foreground">Share your reflection on your evidence below.</p>
+                      <p className="text-sm text-muted-foreground">Complete your response below.</p>
                       {assessmentQuestions.map((q) => (
                         <div key={q.id} className="space-y-2">
                           <Label htmlFor={q.id} className="text-sm font-medium">{q.question}</Label>
